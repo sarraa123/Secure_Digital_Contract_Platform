@@ -1,0 +1,12 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-Login
+Flask-WTF
+argon2-cffi
+cryptography
+python-dotenv
+pytest
+pytest-flask
+bandit
+pip-audit
