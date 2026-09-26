@@ -50,3 +50,23 @@ def authenticate_user(email: str, password: str) -> User | None:
         return None
 
     return user
+
+
+def change_user_password(
+    user: User,
+    current_password: str,
+    new_password: str,
+) -> bool:
+
+    if not verify_password(
+        user.password_hash,
+        current_password,
+    ):
+        return False
+
+    user.password_hash = hash_password(new_password)
+    user.must_change_password = False
+
+    db.session.commit()
+
+    return True

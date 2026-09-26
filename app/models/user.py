@@ -1,14 +1,15 @@
 from datetime import datetime, timezone
-
 from flask_login import UserMixin
-
 from app import db
 
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
     username = db.Column(
         db.String(80),
@@ -37,6 +38,12 @@ class User(UserMixin, db.Model):
         db.String(20),
         nullable=False,
         default="PENDING"
+    )
+
+    must_change_password = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
     )
 
     created_at = db.Column(

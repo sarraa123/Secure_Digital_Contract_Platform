@@ -30,6 +30,17 @@ from .services import (
     create_pending_user,
 )
 
+from .forms import (
+    RegistrationForm,
+    LoginForm,
+    ChangePasswordForm,
+)
+
+from .services import (
+    authenticate_user,
+    change_user_password,
+)
+
 
 auth_bp = Blueprint(
     "auth",
@@ -338,25 +349,28 @@ def enforce_session_timeout():
     # Maximum inactivity:
     # 15 minutes.
 
-    if now - last_activity > timedelta(
-        minutes=15
-    ):
+    if request.endpoint == "static":
+        return None
 
+    if now - last_activity > timedelta(minutes=15):
         logout_user()
         session.clear()
-
         flash(
             "Votre session a expiré après une période d'inactivité.",
             "warning",
         )
+        return redirect(url_for("auth.login"))
 
+
+    if (
+        current_user.must_change_password
+        and request.endpoint != "auth.change_password"
+        and request.endpoint != "auth.logout"
+    ):
         return redirect(
-            url_for("auth.login")
+            url_for("auth.change_password")
         )
 
-    # ==========================================
-    # UPDATE LAST ACTIVITY
-    # ==========================================
 
     session["last_activity"] = now.isoformat()
 
@@ -382,4 +396,41 @@ def logout():
 
     return redirect(
         url_for("auth.login")
+    )
+
+@auth_bp.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+
+    form = ChangePasswordForm()
+
+    if form.validate_on_submit():
+
+        if not change_user_password(
+            current_user,
+            form.current_password.data,
+            form.new_password.data,
+        ):
+            flash(
+                "Le mot de passe actuel est incorrect.",
+                "danger",
+            )
+
+            return render_template(
+                "auth/change_password.html",
+                form=form,
+            ), 401
+
+        flash(
+            "Votre mot de passe a été modifié avec succès.",
+            "success",
+        )
+
+        return redirect(
+            url_for("auth.dashboard")
+        )
+
+    return render_template(
+        "auth/change_password.html",
+        form=form,
     )

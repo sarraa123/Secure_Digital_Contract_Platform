@@ -648,6 +648,61 @@ button, input {
     margin-bottom: var(--space-2);
 }
 
+/* Header action row (e.g. "Créer un gestionnaire" on the users page) */
+
+.app-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+
+.btn-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 11px 18px;
+    background: var(--teal-700);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--transition), transform var(--transition);
+}
+
+.btn-cta:hover {
+    background: var(--teal-600);
+    text-decoration: none;
+}
+
+.btn-cta:active { transform: translateY(1px); }
+
+/* Narrow, centered app pages (change password / create manager) */
+
+.app-main-narrow {
+    max-width: 520px;
+}
+
+.app-form-card {
+    padding: var(--space-6);
+}
+
+.app-form-title {
+    margin-top: var(--space-3);
+    font-size: 26px;
+}
+
+.app-form-notice {
+    margin-top: var(--space-3);
+    color: var(--ink-500);
+    font-size: 14.5px;
+    line-height: 1.6;
+}
+
 /* =========================================================
    RESPONSIVE
    ========================================================= */
