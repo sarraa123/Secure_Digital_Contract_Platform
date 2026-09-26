@@ -1,0 +1,413 @@
+{% extends "base_users.html" %}
+{% block title %}Profile · Veridoc{% endblock %}
+{% block content %}
+
+<div class="header-row animate-rise">
+  <div>
+    <p class="eyebrow">Account</p>
+    <h1 class="page-title">Profile</h1>
+    <p class="subtitle">Votre identité, vos clés cryptographiques et vos paramètres de sécurité.</p>
+  </div>
+</div>
+
+<div class="profile-grid">
+
+  <!-- ======================= CARTE IDENTITÉ ======================= -->
+  <section class="panel profile-card animate-rise">
+    <div class="profile-head">
+      <span class="avatar-lg">{{ user.initials }}</span>
+      <div class="profile-id">
+        <h2>{{ user.name }}</h2>
+        <p class="email">{{ user.email }}</p>
+
+        {# Rôle : badge circulaire non éditable #}
+        <span class="role-badge-circle
+                     {{ 'role-admin'   if user.role == 'ADMIN'   else
+                        'role-manager' if user.role == 'MANAGER' else
+                        'role-client' }}">
+          <span class="role-badge-icon">
+            {% if user.role == 'ADMIN' %}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+              </svg>
+            {% elif user.role == 'MANAGER' %}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            {% else %}
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="8" r="4"/>
+                <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>
+              </svg>
+            {% endif %}
+          </span>
+          {{ user.role }}
+        </span>
+      </div>
+    </div>
+
+    <div class="info-list">
+      <div class="info-row">
+        <span>Member since</span>
+        <strong>{{ profile_user.created_at.strftime("%d/%m/%Y") if profile_user.created_at else "—" }}</strong>
+      </div>
+      <div class="info-row">
+        <span>Signing keys</span>
+        <strong>
+          {% if profile_user.has_signing_keys %}
+            <span style="color:hsl(var(--primary));">✓ RSA-3072</span>
+          {% else %}
+            <span style="color:hsl(var(--destructive));">✗ Missing</span>
+          {% endif %}
+        </strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= CARTE MODIFIER MES INFOS ======================= -->
+  <section class="panel profile-card animate-rise delay-1">
+    <div class="security-head">
+      <span class="sec-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        </svg>
+      </span>
+      <div>
+        <h2>Mes informations</h2>
+        <p>Modifier votre nom affiché et votre adresse email.</p>
+      </div>
+    </div>
+
+    <form method="post"
+          action="{{ url_for('employee.update_profile') if user.role != 'CLIENT' else url_for('client.update_profile') }}"
+          class="profile-inline-form"
+          id="profile-info-form">
+
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div id="profile-info-error" class="modal-error" style="display:none;"></div>
+
+      <label>
+        <span class="field-label">Nom affiché</span>
+        <input class="input" type="text" name="username"
+               value="{{ profile_user.username }}"
+               minlength="2" maxlength="64" required>
+      </label>
+
+      <label>
+        <span class="field-label">Adresse email</span>
+        <input class="input" type="email" name="email"
+               value="{{ profile_user.email }}"
+               maxlength="120" required>
+      </label>
+
+      <div class="profile-form-actions">
+        <button type="submit" class="btn">Enregistrer les modifications</button>
+      </div>
+    </form>
+  </section>
+
+</div>
+
+<!-- ======================= CLÉ PUBLIQUE ======================= -->
+<section class="panel profile-card animate-rise delay-2" style="margin-top:22px;">
+  <div class="security-head">
+    <span class="sec-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+      </svg>
+    </span>
+    <div style="flex:1;">
+      <h2>Clé publique de signature</h2>
+      <p>Utilisée pour vérifier les signatures RSA-PSS de vos contrats.</p>
+    </div>
+  </div>
+
+  {% if profile_user.public_key_pem %}
+  <div class="pubkey-block">
+    <div class="pubkey-head">
+      <span class="pill verified">RSA-3072</span>
+      <button class="btn outline sm" id="btn-copy-pubkey" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy
+      </button>
+    </div>
+    <pre class="pubkey-pem" id="pubkey-pem">{{ profile_user.public_key_pem }}</pre>
+  </div>
+  {% else %}
+  <p style="margin-top:14px;font-size:12px;color:hsl(var(--destructive));">
+    Aucune clé publique associée à votre compte.
+  </p>
+  {% endif %}
+</section>
+
+<!-- ======================= ZONE SÉCURITÉ ======================= -->
+<section class="panel profile-card animate-rise delay-3" style="margin-top:22px;">
+  <div class="security-head">
+    <span class="sec-icon" style="background:hsl(var(--destructive) / .1);color:hsl(var(--destructive));">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </span>
+    <div style="flex:1;">
+      <h2>Sécurité</h2>
+      <p>Protégez votre compte.</p>
+    </div>
+  </div>
+
+  <div class="danger-actions">
+    <div class="danger-row">
+      <div>
+        <strong>Changer le mot de passe</strong>
+        <p>Un mot de passe fort est obligatoire (min. 12 caractères, majuscules + chiffres + symboles).</p>
+      </div>
+      <button class="btn outline" id="btn-open-password" type="button">Changer</button>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== MODAL CHANGE PASSWORD ====================== -->
+<div class="modal-overlay" id="password-modal">
+  <div class="modal modal-confirm">
+    <div class="modal-head">
+      <div class="confirm-icon confirm-icon-validate">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h2>Changer le mot de passe</h2>
+      <button class="icon-btn" id="btn-close-password" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="password-error" class="modal-error" style="display:none;"></div>
+
+    <form method="post"
+          action="{{ url_for('employee.change_password') if user.role != 'CLIENT' else url_for('client.change_password') }}"
+          id="password-form"
+          novalidate>
+
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label>
+        <span class="field-label">Mot de passe actuel</span>
+        <div class="password-input-wrap">
+          <input class="input" type="password" name="current_password"
+                 id="pwd-current" required autocomplete="current-password">
+          <button type="button" class="pwd-toggle" data-target="pwd-current" aria-label="Show password">
+            {# Œil ouvert (caché par défaut) #}
+            <svg class="pwd-icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            {# Œil barré (visible par défaut) #}
+            <svg class="pwd-icon-eye-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+              <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+              <path d="m2 2 20 20"/>
+            </svg>
+          </button>
+        </div>
+      </label>
+
+      <label>
+        <span class="field-label">Nouveau mot de passe</span>
+        <div class="password-input-wrap">
+          <input class="input" type="password" name="new_password"
+                 id="pwd-new" minlength="12" required autocomplete="new-password">
+          <button type="button" class="pwd-toggle" data-target="pwd-new" aria-label="Show password">
+            <svg class="pwd-icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg class="pwd-icon-eye-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+              <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+              <path d="m2 2 20 20"/>
+            </svg>
+          </button>
+        </div>
+        <span class="field-hint">Minimum 12 caractères.</span>
+      </label>
+
+      <label>
+        <span class="field-label">Confirmer le nouveau mot de passe</span>
+        <div class="password-input-wrap">
+          <input class="input" type="password" name="confirm_password"
+                 id="pwd-confirm" minlength="12" required autocomplete="new-password">
+          <button type="button" class="pwd-toggle" data-target="pwd-confirm" aria-label="Show password">
+            <svg class="pwd-icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg class="pwd-icon-eye-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+              <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+              <path d="m2 2 20 20"/>
+            </svg>
+          </button>
+        </div>
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" class="btn outline" id="btn-cancel-password">Annuler</button>
+        <button type="submit" class="btn" id="btn-submit-password">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+          Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // ---------------------------------------------------------------
+  //  COPY PUBLIC KEY
+  // ---------------------------------------------------------------
+  const btnCopy = document.getElementById('btn-copy-pubkey');
+  if (btnCopy) {
+    btnCopy.addEventListener('click', async () => {
+      const pem = document.getElementById('pubkey-pem').textContent;
+      try {
+        await navigator.clipboard.writeText(pem);
+        btnCopy.textContent = 'Copied !';
+        setTimeout(() => {
+          btnCopy.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+        }, 2000);
+      } catch (err) {
+        alert('Copie impossible dans ce navigateur.');
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------
+  //  PASSWORD VISIBILITY TOGGLE
+  //  - masqué  → icône "œil barré"  (visible)
+  //  - visible → icône "œil ouvert" (visible)
+  // ---------------------------------------------------------------
+  document.querySelectorAll('.pwd-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+
+      const eye    = btn.querySelector('.pwd-icon-eye');
+      const eyeOff = btn.querySelector('.pwd-icon-eye-off');
+
+      if (eye && eyeOff) {
+        // Après clic :
+        //   si était masqué  → devient visible → on affiche œil OUVERT
+        //   si était visible → devient masqué  → on affiche œil BARRÉ
+        eye.style.display    = isHidden ? 'block' : 'none';
+        eyeOff.style.display = isHidden ? 'none'  : 'block';
+      }
+
+      btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+    });
+  });
+
+  // ---------------------------------------------------------------
+  //  MODAL CHANGE PASSWORD
+  // ---------------------------------------------------------------
+  const pwdModal = document.getElementById('password-modal');
+  const pwdForm  = document.getElementById('password-form');
+  const pwdErr   = document.getElementById('password-error');
+  const pwdBtn   = document.getElementById('btn-submit-password');
+
+  function showPwdError(msg) {
+    pwdErr.textContent = msg;
+    pwdErr.style.display = 'block';
+    clearTimeout(showPwdError._t);
+    showPwdError._t = setTimeout(() => pwdErr.style.display = 'none', 6000);
+  }
+  function clearPwdError() {
+    pwdErr.textContent = '';
+    pwdErr.style.display = 'none';
+  }
+
+  document.getElementById('btn-open-password').addEventListener('click', () => {
+    clearPwdError();
+    pwdForm.reset();
+
+    // Remettre tous les champs en mode password
+    pwdForm.querySelectorAll('input[id^="pwd-"]').forEach(i => {
+      i.type = 'password';
+    });
+
+    // Remettre les icônes dans l'état "masqué" : œil barré visible
+    pwdForm.querySelectorAll('.pwd-toggle').forEach(b => {
+      const eye    = b.querySelector('.pwd-icon-eye');
+      const eyeOff = b.querySelector('.pwd-icon-eye-off');
+      if (eye)    eye.style.display    = 'none';   // œil ouvert caché
+      if (eyeOff) eyeOff.style.display = 'block';  // œil barré visible
+    });
+
+    pwdModal.classList.add('open');
+  });
+
+  document.getElementById('btn-close-password').addEventListener('click',
+    () => pwdModal.classList.remove('open'));
+  document.getElementById('btn-cancel-password').addEventListener('click',
+    () => pwdModal.classList.remove('open'));
+  pwdModal.addEventListener('click', (e) => {
+    if (e.target === pwdModal) pwdModal.classList.remove('open');
+  });
+
+  pwdForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearPwdError();
+
+    const cur  = pwdForm.current_password.value;
+    const nw   = pwdForm.new_password.value;
+    const conf = pwdForm.confirm_password.value;
+
+    if (!cur)                       return showPwdError('Mot de passe actuel requis.');
+    if (nw.length < 12)             return showPwdError('Le nouveau mot de passe doit faire au moins 12 caractères.');
+    if (nw !== conf)                return showPwdError('Les deux mots de passe ne correspondent pas.');
+
+    pwdBtn.disabled = true;
+    pwdBtn.dataset.t = pwdBtn.textContent.trim();
+    pwdBtn.textContent = 'Enregistrement…';
+
+    try {
+      const res = await fetch(pwdForm.action, {
+        method: 'POST',
+        body: new FormData(pwdForm),
+        headers: { 'Accept': 'application/json',
+                   'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+      });
+      const data = await res.json();
+      if (data.ok) {
+        window.location.reload();
+        return;
+      }
+      showPwdError(data.error || 'Erreur inconnue.');
+    } catch (err) {
+      showPwdError('Erreur réseau.');
+    } finally {
+      pwdBtn.disabled = false;
+      pwdBtn.textContent = pwdBtn.dataset.t || 'Enregistrer';
+    }
+  });
+</script>
+
+{% endblock %}

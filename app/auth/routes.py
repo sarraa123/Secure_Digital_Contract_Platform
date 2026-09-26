@@ -1,3 +1,5 @@
+from urllib.parse import urljoin, urlparse
+
 from flask import Blueprint, flash, redirect, render_template, url_for
 
 from app.models import User
@@ -42,6 +44,36 @@ auth_bp = Blueprint(
     __name__,
     url_prefix="/auth",
 )
+
+
+# ---------------------------------------------------------------------------
+# Aiguillage vers la bonne interface selon le rôle de l'utilisateur.
+# C'est ici que "login" se relie aux autres espaces (client / employee /
+# admin) : chaque rôle a son propre tableau de bord.
+# ---------------------------------------------------------------------------
+_ROLE_HOME_ENDPOINT = {
+    "ADMIN": "admin.users",
+    "MANAGER": "employee.dashboard",
+    "CLIENT": "client.dashboard",
+}
+
+
+def _redirect_after_login(user):
+    endpoint = _ROLE_HOME_ENDPOINT.get(user.role, "auth.dashboard")
+    return redirect(url_for(endpoint))
+
+
+def _is_safe_redirect_url(request, target):
+    """Empêche les redirections ouvertes : `next` ne peut pointer que
+    vers une URL du même site."""
+    if not target:
+        return False
+    host_url = urlparse(request.host_url)
+    redirect_url = urlparse(urljoin(request.host_url, target))
+    return (
+        redirect_url.scheme in ("http", "https")
+        and host_url.netloc == redirect_url.netloc
+    )
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -107,7 +139,7 @@ def registration_success():
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("auth.dashboard"))
+        return _redirect_after_login(current_user)
 
     form = LoginForm()
 
@@ -177,7 +209,11 @@ def login():
 
         db.session.commit()
 
-        return redirect(url_for("auth.dashboard"))
+        next_url = request.args.get("next")
+        if next_url and _is_safe_redirect_url(request, next_url):
+            return redirect(next_url)
+
+        return _redirect_after_login(user)
 
     return render_template(
         "auth/login.html",

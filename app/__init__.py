@@ -1,16 +1,7 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect
-from flask_login import LoginManager
 
 from .config import Config
-
-db = SQLAlchemy()
-migrate = Migrate()
-csrf = CSRFProtect()
-login_manager = LoginManager()
-login_manager.session_protection = "strong"
+from .extensions import db, migrate, csrf, login_manager
 
 
 @login_manager.user_loader
@@ -33,14 +24,20 @@ def create_app():
     login_manager.init_app(app)
 
     login_manager.login_view = "auth.login"
-    login_manager.login_message = "Veuillez vous connecter pour accéder à cette page."
+    login_manager.login_message = "Veuillez vous connecter pour acceder a cette page."
     login_manager.login_message_category = "warning"
 
+    # Imports differes (a l'interieur de la factory) pour eviter les
+    # imports circulaires : les blueprints importent des modeles qui
+    # eux-memes importent `db` depuis ce module.
     from .admin import admin_bp
     from .auth import auth_bp
+    from .routes import client, employee
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(employee.bp)
+    app.register_blueprint(client.bp)
 
     @app.route("/")
     def home():

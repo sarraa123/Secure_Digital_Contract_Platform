@@ -1,0 +1,389 @@
+{% extends "base_users.html" %}
+{% block title %}Contrats · Veridoc{% endblock %}
+{% block content %}
+
+<div class="header-row animate-rise">
+  <div>
+    <p class="eyebrow">Contract workspace</p>
+    <h1 class="page-title">Contracts</h1>
+    <p class="subtitle">One clear source of truth for every agreement.</p>
+  </div>
+  <button class="btn" id="btn-new-contract" type="button">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+    New contract
+  </button>
+</div>
+
+<!-- ====================== MODAL CREATE ====================== -->
+<div class="modal-overlay" id="create-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Create new contract</h2>
+      <button class="icon-btn" id="btn-close-modal" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <form method="post"
+          action="{{ url_for('employee.create_contract') }}"
+          enctype="multipart/form-data"
+          class="modal-form"
+          id="create-contract-form"
+          novalidate>
+
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div id="create-global-error" class="modal-error" style="display:none;"></div>
+
+      <p class="field-section">Contract information</p>
+
+      <label>
+        <span class="field-label">Contract title *</span>
+        <input class="input" type="text" name="title" id="f-title"
+               minlength="2" maxlength="120"
+               placeholder="e.g. Northstar Services Agreement">
+        <span class="field-error" id="err-title"></span>
+      </label>
+
+      <label>
+        <span class="field-label">Contract type *</span>
+        <select class="input" name="contract_type" id="f-type">
+          <option value="">— Select type —</option>
+          <option value="SERVICE_AGREEMENT">Service Agreement</option>
+          <option value="NDA">NDA</option>
+          <option value="SUPPLY">Supply Contract</option>
+          <option value="LEASE">Lease</option>
+          <option value="PARTNERSHIP">Partnership</option>
+          <option value="OTHER">Other</option>
+        </select>
+        <span class="field-error" id="err-type"></span>
+      </label>
+
+      <label>
+        <span class="field-label">Description *</span>
+        <textarea class="input" name="description" id="f-description" rows="3"
+                  minlength="10" maxlength="500"
+                  placeholder="Short summary (10–500 characters)…"></textarea>
+        <span class="field-error" id="err-description"></span>
+      </label>
+
+      <label>
+        <span class="field-label">Client</span>
+        <select class="input" name="client" id="f-client">
+          <option value="">— Select client (optional) —</option>
+          {% for c in clients %}
+            <option value="{{ c.email }}">{{ c.username }} ({{ c.email }})</option>
+          {% endfor %}
+        </select>
+        <span class="field-error" id="err-client"></span>
+      </label>
+
+      <div class="field-row">
+        <label>
+          <span class="field-label">Contract date *</span>
+          <input class="input" type="date" name="start_date" id="f-start">
+          <span class="field-error" id="err-start"></span>
+        </label>
+        <label>
+          <span class="field-label">Expiration date *</span>
+          <input class="input" type="date" name="end_date" id="f-end">
+          <span class="field-error" id="err-end"></span>
+        </label>
+      </div>
+
+      <p class="field-section">Document</p>
+
+      <label>
+        <span class="field-label">Contract document (PDF) *</span>
+        <input class="input" type="file" name="document" id="f-file"
+               accept="application/pdf">
+        <span class="field-hint">
+          PDF only · 10 MB max · encrypted with AES-256-GCM server-side,
+          integrity protected with HMAC-SHA256.
+        </span>
+        <span class="field-error" id="err-file"></span>
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" class="btn outline" id="btn-cancel-modal">Cancel</button>
+        <button type="submit" class="btn" id="btn-submit-create" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14"/><path d="M12 5v14"/>
+          </svg>
+          Create contract
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ====================== LISTE ====================== -->
+<div class="panel animate-rise delay-1" style="border-radius:16px;">
+  <form class="toolbar" method="get">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="input" type="search" name="q" value="{{ query }}" placeholder="Search contracts by title…">
+    </div>
+    <div class="filter-box">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <select name="status" onchange="this.form.submit()">
+        <option value="ALL" {{ 'selected' if status=='ALL' }}>All statuses</option>
+        <option value="DRAFT" {{ 'selected' if status=='DRAFT' }}>Draft</option>
+        <option value="SHARED" {{ 'selected' if status=='SHARED' }}>Shared</option>
+        <option value="VALIDATED" {{ 'selected' if status=='VALIDATED' }}>Validated</option>
+        <option value="SIGNED" {{ 'selected' if status=='SIGNED' }}>Signed</option>
+      </select>
+    </div>
+  </form>
+
+  <div style="padding:0 20px 20px;">
+  {% if contracts|length == 0 %}
+    <div class="empty-state">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6.5L18 9v4"/><path d="M15 15h6"/><path d="M18 12v6"/></svg>
+      <p class="empty-title">No contracts yet.</p>
+      <p>Click "New contract" to create one.</p>
+    </div>
+  {% else %}
+    <table class="contracts-table">
+      <thead><tr><th>Contract</th><th>Owner</th><th>Status</th><th>Integrity</th><th>Updated</th><th></th></tr></thead>
+      <tbody>
+        {% for c in contracts %}
+        <tr>
+          <td>
+            <a href="{{ url_for('employee.contract_detail', contract_id=c.id) }}" class="contract-cell">
+              <span class="icon-box" style="width:32px;height:32px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+              </span>
+              <span>
+                <span class="name">{{ c.title }}</span>
+                <span class="ver">Version {{ c.version }}</span>
+              </span>
+            </a>
+          </td>
+          <td class="owner">{{ c.owner_name }}</td>
+          <td><span class="pill {{ c.status|lower }}">{{ c.status }}</span></td>
+          <td><span class="pill {{ 'verified' if c.integrity=='VERIFIED' else 'unverified' }}">{{ c.integrity }}</span></td>
+          <td class="owner">{{ c.updated_at_str }}</td>
+          <td><a class="open-link" href="{{ url_for('employee.contract_detail', contract_id=c.id) }}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+  </div>
+</div>
+
+<!-- ====================== SCRIPT ====================== -->
+<script>
+  // ---------------------------------------------------------------------
+  //  MODAL CREATE — validation progressive + AJAX
+  // ---------------------------------------------------------------------
+  const modal     = document.getElementById('create-modal');
+  const openBtn   = document.getElementById('btn-new-contract');
+  const closeBtns = [
+    document.getElementById('btn-close-modal'),
+    document.getElementById('btn-cancel-modal'),
+  ];
+  const form      = document.getElementById('create-contract-form');
+  const submitBtn = document.getElementById('btn-submit-create');
+  const globalErr = document.getElementById('create-global-error');
+
+  const fields = {
+    title:       document.getElementById('f-title'),
+    type:        document.getElementById('f-type'),
+    description: document.getElementById('f-description'),
+    client:      document.getElementById('f-client'),
+    start:       document.getElementById('f-start'),
+    end:         document.getElementById('f-end'),
+    file:        document.getElementById('f-file'),
+  };
+  const errors = {
+    title:       document.getElementById('err-title'),
+    type:        document.getElementById('err-type'),
+    description: document.getElementById('err-description'),
+    client:      document.getElementById('err-client'),
+    start:       document.getElementById('err-start'),
+    end:         document.getElementById('err-end'),
+    file:        document.getElementById('err-file'),
+  };
+
+  const touched = new Set();
+  let submitAttempted = false;
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+
+  function checkTitle() {
+    const v = fields.title.value.trim();
+    if (!v)              return { ok: false, msg: 'Le titre est obligatoire.' };
+    if (v.length < 2)    return { ok: false, msg: 'Minimum 2 caractères.' };
+    if (v.length > 120)  return { ok: false, msg: 'Maximum 120 caractères.' };
+    return { ok: true };
+  }
+  function checkType() {
+    if (!fields.type.value) return { ok: false, msg: 'Sélectionnez un type.' };
+    return { ok: true };
+  }
+  function checkDescription() {
+    const v = fields.description.value.trim();
+    if (!v)                return { ok: false, msg: 'La description est obligatoire.' };
+    if (v.length < 10)     return { ok: false, msg: 'Minimum 10 caractères.' };
+    if (v.length > 500)    return { ok: false, msg: 'Maximum 500 caractères.' };
+    return { ok: true };
+  }
+  function checkClient() { return { ok: true }; }
+  function checkStart() {
+    const v = fields.start.value;
+    if (!v)              return { ok: false, msg: 'Date de début obligatoire.' };
+    const d = new Date(v); d.setHours(0,0,0,0);
+    if (d < today)       return { ok: false, msg: 'Date dans le passé.' };
+    return { ok: true };
+  }
+  function checkEnd() {
+    const v = fields.end.value;
+    if (!v)              return { ok: false, msg: "Date d'expiration obligatoire." };
+    const d = new Date(v); d.setHours(0,0,0,0);
+    if (d < today)       return { ok: false, msg: 'Date dans le passé.' };
+    if (fields.start.value) {
+      const s = new Date(fields.start.value); s.setHours(0,0,0,0);
+      if (d <= s)        return { ok: false, msg: "Doit être après la date de début." };
+    }
+    return { ok: true };
+  }
+  function checkFile() {
+    const f = fields.file.files[0];
+    if (!f)              return { ok: false, msg: 'Fichier PDF obligatoire.' };
+    if (f.type !== 'application/pdf' && !f.name.toLowerCase().endsWith('.pdf'))
+                         return { ok: false, msg: 'Seuls les PDF sont acceptés.' };
+    if (f.size > MAX_FILE_SIZE)
+                         return { ok: false, msg: 'Max 10 Mo.' };
+    if (f.size === 0)    return { ok: false, msg: 'Fichier vide.' };
+    return { ok: true };
+  }
+
+  const checks = {
+    title: checkTitle, type: checkType, description: checkDescription,
+    client: checkClient, start: checkStart, end: checkEnd, file: checkFile,
+  };
+
+  function renderField(name) {
+    const r = checks[name]();
+    const mustShow = touched.has(name) || submitAttempted;
+    if (r.ok || !mustShow) {
+      errors[name].textContent = '';
+      fields[name].classList.remove('input-invalid');
+    } else {
+      errors[name].textContent = r.msg;
+      fields[name].classList.add('input-invalid');
+    }
+    return r.ok;
+  }
+  function refreshField(name) { renderField(name); refreshButton(); }
+  function refreshButton() {
+    const allOk = Object.keys(checks).every(n => checks[n]().ok);
+    submitBtn.disabled = !allOk;
+  }
+
+  Object.keys(fields).forEach(name => {
+    const el = fields[name];
+    el.addEventListener('blur', () => { touched.add(name); refreshField(name); });
+    el.addEventListener('input',  () => {
+      if (touched.has(name) || submitAttempted) refreshField(name);
+      else refreshButton();
+    });
+    el.addEventListener('change', () => {
+      if (touched.has(name) || submitAttempted) refreshField(name);
+      else refreshButton();
+    });
+  });
+  fields.start.addEventListener('change', () => {
+    if (touched.has('end') || submitAttempted) refreshField('end');
+    refreshButton();
+  });
+  fields.end.addEventListener('change', () => {
+    if (touched.has('start') || submitAttempted) refreshField('start');
+    refreshButton();
+  });
+
+  function showGlobalError(msg) {
+    globalErr.textContent = msg;
+    globalErr.style.display = 'block';
+    clearTimeout(showGlobalError._t);
+    showGlobalError._t = setTimeout(() => globalErr.style.display = 'none', 6000);
+  }
+  function clearGlobalError() {
+    globalErr.textContent = '';
+    globalErr.style.display = 'none';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitAttempted = true;
+    Object.keys(fields).forEach(renderField);
+    refreshButton();
+
+    const allOk = Object.keys(checks).every(n => checks[n]().ok);
+    if (!allOk) {
+      showGlobalError("Veuillez corriger les erreurs du formulaire.");
+      return;
+    }
+
+    clearGlobalError();
+    submitBtn.disabled = true;
+    submitBtn.dataset.t = submitBtn.textContent.trim();
+    submitBtn.textContent = 'Création…';
+
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        window.location.href = data.redirect;
+        return;
+      }
+      showGlobalError(data.error || 'Erreur inconnue.');
+      if (data.error && data.error.toLowerCase().includes('pdf')) {
+        errors.file.textContent = data.error;
+        fields.file.classList.add('input-invalid');
+      }
+    } catch (err) {
+      showGlobalError('Erreur réseau. Vérifiez votre connexion.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitBtn.dataset.t || 'Create contract';
+    }
+  });
+
+  function resetForm() {
+    form.reset();
+    touched.clear();
+    submitAttempted = false;
+    Object.keys(errors).forEach(n => {
+      errors[n].textContent = '';
+      fields[n].classList.remove('input-invalid');
+    });
+    clearGlobalError();
+    submitBtn.disabled = true;
+  }
+
+  openBtn.addEventListener('click', () => { resetForm(); modal.classList.add('open'); });
+  closeBtns.forEach(b => b.addEventListener('click', () => {
+    modal.classList.remove('open'); resetForm();
+  }));
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) { modal.classList.remove('open'); resetForm(); }
+  });
+
+  submitBtn.disabled = true;
+</script>
+{% endblock %}

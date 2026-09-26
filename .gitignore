@@ -12,3 +12,5 @@ instance/
 *.db
 *.sqlite
 *.sqlite3
+storage/
+*.pyo
