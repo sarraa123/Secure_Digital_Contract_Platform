@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
 
+from flask_login import UserMixin
+
 from app import db
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)

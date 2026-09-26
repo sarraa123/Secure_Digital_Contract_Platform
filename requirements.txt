@@ -10,3 +10,4 @@ pytest
 pytest-flask
 bandit
 pip-audit
+email-validator

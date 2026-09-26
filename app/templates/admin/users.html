@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Administration des utilisateurs</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <nav class="app-nav">
+        <div class="brand-mark">
+            <span class="brand-mark-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Z" stroke="#0b1526" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M9 12.5l2 2 4-4.5" stroke="#0b1526" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </span>
+            <span class="brand-mark-name">Veridoc</span>
+        </div>
+    </nav>
+
+    <main class="app-main">
+
+        <div class="app-header">
+            <span class="eyebrow">Admin</span>
+            <h1>Utilisateurs en attente</h1>
+        </div>
+
+        {% if users %}
+
+            <div class="user-list">
+
+                {% for user in users %}
+
+                    <div class="card user-card">
+
+                        <div class="user-card-info">
+                            <h3>{{ user.username }}</h3>
+
+                            <div class="user-card-meta">
+                                <span>{{ user.email }}</span>
+                                <span class="dot"></span>
+                                <span class="badge badge-pending">{{ user.status }}</span>
+                                <span class="dot"></span>
+                                <span>Inscrit le {{ user.created_at }}</span>
+                            </div>
+                        </div>
+
+                        <div class="user-card-actions">
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('admin.approve', user_id=user.id) }}"
+                            >
+
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token() }}"
+                                >
+
+                                <button type="submit" class="btn-approve">
+                                    Approuver
+                                </button>
+
+                            </form>
+
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('admin.reject', user_id=user.id) }}"
+                            >
+
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token() }}"
+                                >
+
+                                <button type="submit" class="btn-reject">
+                                    Refuser
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="card empty-state">
+                <h3>Aucun utilisateur en attente</h3>
+                <p>Les nouvelles demandes d'inscription apparaîtront ici.</p>
+            </div>
+
+        {% endif %}
+
+    </main>
+
+</div>
+
+</body>
+
+</html>
