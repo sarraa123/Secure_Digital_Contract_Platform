@@ -66,3 +66,35 @@ class LoginForm(FlaskForm):
     )
 
     submit = SubmitField("Se connecter")
+
+
+class ChangePasswordForm(FlaskForm):
+
+    current_password = PasswordField(
+        "Mot de passe actuel",
+        validators=[
+            DataRequired(),
+            Length(max=128),
+        ],
+    )
+
+    new_password = PasswordField(
+        "Nouveau mot de passe",
+        validators=[
+            DataRequired(),
+            Length(min=12, max=128),
+        ],
+    )
+
+    confirm_password = PasswordField(
+        "Confirmer le nouveau mot de passe",
+        validators=[
+            DataRequired(),
+            EqualTo(
+                "new_password",
+                message="Les mots de passe doivent être identiques.",
+            ),
+        ],
+    )
+
+    submit = SubmitField("Modifier le mot de passe")

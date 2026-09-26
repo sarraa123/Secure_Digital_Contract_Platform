@@ -1,0 +1,648 @@
+{% extends "base_users.html" %}
+{% block title %}{{ contract.title }} · Veridoc{% endblock %}
+{% block content %}
+
+<!-- ====================== MODAL EDIT ====================== -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Edit contract</h2>
+      <button class="icon-btn" id="btn-close-edit" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <form method="post"
+          action="{{ url_for('employee.update_contract', contract_id=contract.id) }}"
+          class="modal-form"
+          id="edit-form"
+          novalidate>
+
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div id="edit-global-error" class="modal-error" style="display:none;"></div>
+
+      <p class="field-section">Contract information</p>
+
+      <label>
+        <span class="field-label">Contract title *</span>
+        <input class="input" type="text" name="title" id="ef-title"
+               minlength="2" maxlength="120"
+               value="{{ contract.title }}">
+        <span class="field-error" id="eerr-title"></span>
+      </label>
+
+      <label>
+        <span class="field-label">Contract type *</span>
+        <select class="input" name="contract_type" id="ef-type">
+          <option value="SERVICE_AGREEMENT" {{ 'selected' if contract.contract_type == 'SERVICE_AGREEMENT' }}>Service Agreement</option>
+          <option value="NDA"               {{ 'selected' if contract.contract_type == 'NDA' }}>NDA</option>
+          <option value="SUPPLY"            {{ 'selected' if contract.contract_type == 'SUPPLY' }}>Supply Contract</option>
+          <option value="LEASE"             {{ 'selected' if contract.contract_type == 'LEASE' }}>Lease</option>
+          <option value="PARTNERSHIP"       {{ 'selected' if contract.contract_type == 'PARTNERSHIP' }}>Partnership</option>
+          <option value="OTHER"             {{ 'selected' if contract.contract_type == 'OTHER' }}>Other</option>
+        </select>
+        <span class="field-error" id="eerr-type"></span>
+      </label>
+
+      <label>
+        <span class="field-label">Description *</span>
+        <textarea class="input" name="description" id="ef-description" rows="3"
+                  minlength="10" maxlength="500">{{ contract.description }}</textarea>
+        <span class="field-error" id="eerr-description"></span>
+      </label>
+
+      <label>
+        <span class="field-label">Client</span>
+        <select class="input" name="client" id="ef-client">
+          <option value="">— Select client (optional) —</option>
+          {% for c in clients %}
+            <option value="{{ c.email }}"
+              {{ 'selected' if contract.client_id and c.id == contract.client_id }}>
+              {{ c.username }} ({{ c.email }})
+            </option>
+          {% endfor %}
+        </select>
+        <span class="field-error" id="eerr-client"></span>
+      </label>
+
+      <div class="field-row">
+        <label>
+          <span class="field-label">Contract date *</span>
+          <input class="input" type="date" name="start_date" id="ef-start"
+                 value="{{ contract.start_date.isoformat() if contract.start_date else '' }}">
+          <span class="field-error" id="eerr-start"></span>
+        </label>
+        <label>
+          <span class="field-label">Expiration date *</span>
+          <input class="input" type="date" name="end_date" id="ef-end"
+                 value="{{ contract.end_date.isoformat() if contract.end_date else '' }}">
+          <span class="field-error" id="eerr-end"></span>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn outline" id="btn-cancel-edit">Cancel</button>
+        <button type="submit" class="btn" id="btn-edit-submit" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+          Save changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<a href="{{ url_for('employee.contracts') }}" class="back-link">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+  </svg>
+  Back to contracts
+</a>
+
+<div class="detail-head animate-rise">
+  <div class="left">
+    <span class="file-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/><path d="m9 15 2 2 4-4"/>
+      </svg>
+    </span>
+    <div>
+      <div class="title-row">
+        <h1>{{ contract.title }}</h1>
+        <span class="pill {{ contract.status|lower }}">{{ contract.status }}</span>
+      </div>
+      <p class="owner-meta">
+        Owned by <strong style="color:hsl(var(--foreground));">{{ contract.owner_name }}</strong>
+        · Version {{ contract.version }}
+        · Updated {{ contract.updated_at_str }}
+      </p>
+    </div>
+  </div>
+
+  <div class="actions">
+    {% if contract.status == 'SIGNED' %}
+      <span class="pill signed" style="height:40px;padding:0 16px;display:inline-flex;align-items:center;font-size:11px;">
+        🔒 Signed — locked
+      </span>
+    {% else %}
+      <button class="btn outline" id="btn-edit" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        </svg>
+        Edit
+      </button>
+      <button class="btn" id="btn-share" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+          <path d="m8.6 13.5 6.8 3.9"/><path d="m15.4 6.6-6.8 3.9"/>
+        </svg>
+        Share
+      </button>
+    {% endif %}
+
+    <a class="btn outline" href="{{ url_for('employee.download_contract', contract_id=contract.id) }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>
+      </svg>
+      Download
+    </a>
+
+    <button class="btn outline" id="btn-preview" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      Preview
+    </button>
+  </div>
+</div>
+
+<!-- ====================== PANNEAU SHARE ====================== -->
+{% if contract.status != 'SIGNED' %}
+<div class="panel share-panel" id="share-panel">
+  <div class="share-head">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="hsl(174 52% 36%)" stroke-width="2">
+      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+      <path d="m8.6 13.5 6.8 3.9"/><path d="m15.4 6.6-6.8 3.9"/>
+    </svg>
+    <div>
+      <p class="t">Share this contract</p>
+      <p class="s">Choose exactly what the recipient can do.</p>
+    </div>
+  </div>
+
+  <div id="share-error" class="modal-error" style="display:none;"></div>
+
+  <form id="share-form"
+        method="post"
+        action="{{ url_for('employee.share_contract', contract_id=contract.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label>
+  <span>Recipient email *</span>
+  <select class="input" name="email" id="share-email" required>
+    <option value="">— Sélectionnez un client —</option>
+    {% for c in clients %}
+      <option value="{{ c.email }}">
+        {{ c.username }} ({{ c.email }})
+      </option>
+    {% endfor %}
+  </select>
+</label>
+    {# `validate` retiré : la permission `sign` implique `validate` #}
+    <div class="perm-group" id="perm-group">
+      {% for p in ['read','download','sign','share'] %}
+        <button type="button"
+                class="perm-btn {% if p in ['read','download'] %}active{% endif %}"
+                data-perm="{{ p }}">{{ p }}</button>
+      {% endfor %}
+    </div>
+
+    <input type="hidden" name="permissions" id="permissions-input" value="read,download">
+
+    <button class="btn" type="submit" id="btn-share-submit">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+        <path d="m8.6 13.5 6.8 3.9"/><path d="m15.4 6.6-6.8 3.9"/>
+      </svg>
+      Share access
+    </button>
+  </form>
+
+  {% if shares %}
+  <div class="share-current">
+    <p class="share-current-label">Current access</p>
+    <div class="share-list">
+      {% for s in shares %}
+      <div class="share-row">
+        <div class="share-user">
+          <span class="avatar-sm">{{ s.username[:2]|upper }}</span>
+          <div>
+            <p class="share-name">{{ s.username }}</p>
+            <p class="share-email">{{ s.email }}</p>
+          </div>
+        </div>
+        <div class="share-perms">
+          {% for p in s.permissions %}<span class="perm-tag">{{ p }}</span>{% endfor %}
+        </div>
+        <form method="post"
+              action="{{ url_for('employee.revoke_permission', contract_id=contract.id) }}"
+              class="revoke-form"
+              data-email="{{ s.email }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="email" value="{{ s.email }}">
+          <button type="submit" class="btn ghost sm" title="Revoke access">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ====================== METADATA ====================== -->
+<div class="panel animate-rise delay-1" style="border-radius:12px;padding:16px;margin-bottom:20px;">
+  <p class="label" style="margin:0 0 12px;">Contract metadata</p>
+  <div class="meta-grid">
+    <div><span class="meta-k">Type</span><span class="meta-v">{{ contract.contract_type }}</span></div>
+    <div><span class="meta-k">Client</span><span class="meta-v">{{ contract.client_name }}</span></div>
+    <div><span class="meta-k">Start date</span><span class="meta-v">{{ contract.start_date_str }}</span></div>
+    <div><span class="meta-k">End date</span><span class="meta-v">{{ contract.end_date_str }}</span></div>
+  </div>
+  <p style="margin-top:14px;font-size:12px;line-height:1.6;color:hsl(var(--muted-foreground));">
+    {{ contract.description }}
+  </p>
+</div>
+
+<div class="detail-grid animate-rise delay-1">
+  <section class="panel section-card">
+    <div class="lifecycle-head">
+      <div>
+        <p class="label">Lifecycle</p>
+        <h2>Move this agreement forward</h2>
+      </div>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="hsl(214 17% 48%)" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+
+    <div class="timeline">
+      {% set steps = [('DRAFT','Created','Draft created and ready for internal review'),
+                       ('SHARED','Shared','Permissions granted to external collaborators'),
+                       ('VALIDATED','Validated','Integrity check passed'),
+                       ('SIGNED','Signed','Agreement completed and signed')] %}
+      {% set states = ['DRAFT','SHARED','VALIDATED','SIGNED'] %}
+      {% set current = states.index(contract.status) %}
+      {% for key, label, detail in steps %}
+      <div class="step">
+        <div class="dot {{ 'complete' if loop.index0 <= current else '' }}">
+          {% if loop.index0 <= current %}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+          {% else %}{{ loop.index }}{% endif %}
+        </div>
+        {% if not loop.last %}<div class="line {{ 'complete' if loop.index0 < current else '' }}"></div>{% endif %}
+        <div class="step-body">
+          <p class="t {{ 'done' if loop.index0 <= current else '' }}">{{ label }}</p>
+          <p class="d">{{ detail }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <aside style="display:flex;flex-direction:column;gap:22px;">
+    <div class="panel aside-card">
+      <p class="label">Document integrity</p>
+      <div class="integrity-row">
+        <span class="badge-circle {{ 'ok' if contract.integrity=='VERIFIED' else '' }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+          </svg>
+        </span>
+        <div>
+          <span class="pill {{ 'verified' if contract.integrity=='VERIFIED' else 'unverified' }}">
+            {{ contract.integrity }}
+          </span>
+          <p class="checked-at">HMAC-SHA256 verified</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel aside-card">
+      <p class="label">Access permissions</p>
+      {% if contract.permissions %}
+      <div class="perm-tags">
+        {% for p in contract.permissions %}<span class="perm-tag">{{ p }}</span>{% endfor %}
+      </div>
+      {% else %}
+      <p style="margin-top:14px;font-size:12px;color:hsl(var(--muted-foreground));">
+        No external access has been granted.
+      </p>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+
+<!-- ====================== MODAL PREVIEW PDF ====================== -->
+<div class="modal-overlay" id="preview-modal">
+  <div class="modal modal-preview">
+    <div class="modal-head">
+      <h2>{{ contract.title }}</h2>
+      <button class="icon-btn" id="btn-close-preview" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="preview-body">
+      <iframe id="pdf-frame" src="" title="PDF preview"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== SCRIPTS ====================== -->
+<script nonce="{{ csp_nonce() }}">
+  // Permissions toggle
+  const permInput = document.getElementById('permissions-input');
+  document.querySelectorAll('.perm-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('active');
+      const active = [...document.querySelectorAll('.perm-btn.active')]
+                       .map(b => b.dataset.perm);
+      if (permInput) permInput.value = active.join(',');
+    });
+  });
+
+  // Share panel toggle
+  const btnShare = document.getElementById('btn-share');
+  const sharePanel = document.getElementById('share-panel');
+  if (btnShare && sharePanel) {
+    btnShare.addEventListener('click', () => {
+      sharePanel.classList.toggle('open');
+      const editModal = document.getElementById('edit-modal');
+      if (editModal) editModal.classList.remove('open');
+    });
+  }
+
+  // AJAX Share
+  const shareForm = document.getElementById('share-form');
+  const shareErr  = document.getElementById('share-error');
+  const shareBtn  = document.getElementById('btn-share-submit');
+
+  function showShareError(msg) {
+    if (!shareErr) return;
+    shareErr.textContent = msg;
+    shareErr.style.display = 'block';
+    clearTimeout(showShareError._t);
+    showShareError._t = setTimeout(() => shareErr.style.display = 'none', 6000);
+  }
+
+  if (shareForm) {
+    shareForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      shareErr.style.display = 'none';
+      shareBtn.disabled = true;
+      shareBtn.dataset.t = shareBtn.textContent.trim();
+      shareBtn.textContent = 'Envoi…';
+
+      try {
+        const res = await fetch(shareForm.action, {
+          method: 'POST',
+          body: new FormData(shareForm),
+          headers: { 'Accept': 'application/json',
+                     'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+        });
+        const data = await res.json();
+        if (data.ok) { window.location.href = data.redirect; return; }
+        showShareError(data.error || 'Erreur inconnue.');
+      } catch (err) {
+        showShareError('Erreur réseau.');
+      } finally {
+        shareBtn.disabled = false;
+        shareBtn.textContent = shareBtn.dataset.t || 'Share access';
+      }
+    });
+  }
+
+  // AJAX Revoke
+  document.querySelectorAll('.revoke-form').forEach(f => {
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!confirm(`Retirer l'accès de ${f.dataset.email} ?`)) return;
+      try {
+        const res = await fetch(f.action, {
+          method: 'POST',
+          body: new FormData(f),
+          headers: { 'Accept': 'application/json',
+                     'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+        });
+        const data = await res.json();
+        if (data.ok) window.location.href = data.redirect;
+        else showShareError(data.error);
+      } catch (err) {
+        showShareError('Erreur réseau.');
+      }
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  //  PREVIEW PDF
+  // ---------------------------------------------------------------------
+  const previewModal = document.getElementById('preview-modal');
+  const pdfFrame     = document.getElementById('pdf-frame');
+  const btnPreview   = document.getElementById('btn-preview');
+
+  if (btnPreview) {
+    btnPreview.addEventListener('click', () => {
+      pdfFrame.src = '{{ url_for("employee.preview_contract", contract_id=contract.id) }}';
+      previewModal.classList.add('open');
+    });
+  }
+  function closePreview() {
+    previewModal.classList.remove('open');
+    pdfFrame.src = '';
+  }
+  document.getElementById('btn-close-preview').addEventListener('click', closePreview);
+  previewModal.addEventListener('click', (e) => {
+    if (e.target === previewModal) closePreview();
+  });
+
+  // ---------------------------------------------------------------------
+  //  MODAL EDIT
+  // ---------------------------------------------------------------------
+  const editModal = document.getElementById('edit-modal');
+  const editForm  = document.getElementById('edit-form');
+  const editErr   = document.getElementById('edit-global-error');
+  const editBtn   = document.getElementById('btn-edit-submit');
+  const btnEdit   = document.getElementById('btn-edit');
+
+  if (btnEdit && editForm) {
+    const efields = {
+      title:       document.getElementById('ef-title'),
+      type:        document.getElementById('ef-type'),
+      description: document.getElementById('ef-description'),
+      client:      document.getElementById('ef-client'),
+      start:       document.getElementById('ef-start'),
+      end:         document.getElementById('ef-end'),
+    };
+    const eerrors = {
+      title:       document.getElementById('eerr-title'),
+      type:        document.getElementById('eerr-type'),
+      description: document.getElementById('eerr-description'),
+      client:      document.getElementById('eerr-client'),
+      start:       document.getElementById('eerr-start'),
+      end:         document.getElementById('eerr-end'),
+    };
+
+    const initial = {};
+    Object.keys(efields).forEach(k => { initial[k] = efields[k].value; });
+
+    const etouched = new Set();
+    let esubmitAttempted = false;
+
+    function checkETitle() {
+      const v = efields.title.value.trim();
+      if (!v)              return { ok: false, msg: 'Le titre est obligatoire.' };
+      if (v.length < 2)    return { ok: false, msg: 'Minimum 2 caractères.' };
+      if (v.length > 120)  return { ok: false, msg: 'Maximum 120 caractères.' };
+      return { ok: true };
+    }
+    function checkEType() {
+      if (!efields.type.value) return { ok: false, msg: 'Sélectionnez un type.' };
+      return { ok: true };
+    }
+    function checkEDescription() {
+      const v = efields.description.value.trim();
+      if (!v)                return { ok: false, msg: 'La description est obligatoire.' };
+      if (v.length < 10)     return { ok: false, msg: 'Minimum 10 caractères.' };
+      if (v.length > 500)    return { ok: false, msg: 'Maximum 500 caractères.' };
+      return { ok: true };
+    }
+    function checkEClient() { return { ok: true }; }
+    function checkEStart() {
+      if (!efields.start.value) return { ok: false, msg: 'Date de début obligatoire.' };
+      return { ok: true };
+    }
+    function checkEEnd() {
+      if (!efields.end.value) return { ok: false, msg: "Date d'expiration obligatoire." };
+      if (efields.start.value && efields.end.value <= efields.start.value) {
+        return { ok: false, msg: "Doit être après la date de début." };
+      }
+      return { ok: true };
+    }
+
+    const echecks = {
+      title: checkETitle, type: checkEType, description: checkEDescription,
+      client: checkEClient, start: checkEStart, end: checkEEnd,
+    };
+
+    function renderEField(name) {
+      const r = echecks[name]();
+      const mustShow = etouched.has(name) || esubmitAttempted;
+      const errEl   = eerrors[name];
+      const inputEl = efields[name];
+      if (r.ok || !mustShow) {
+        errEl.textContent = '';
+        inputEl.classList.remove('input-invalid');
+      } else {
+        errEl.textContent = r.msg;
+        inputEl.classList.add('input-invalid');
+      }
+      return r.ok;
+    }
+
+    function refreshEButton() {
+      const allOk = Object.keys(echecks).every(n => echecks[n]().ok);
+      const changed = Object.keys(efields).some(
+        k => (efields[k].value || '').trim() !== (initial[k] || '').trim()
+      );
+      editBtn.disabled = !(allOk && changed);
+    }
+
+    function refreshEField(name) { renderEField(name); refreshEButton(); }
+
+    Object.keys(efields).forEach(name => {
+      const el = efields[name];
+      el.addEventListener('blur', () => { etouched.add(name); refreshEField(name); });
+      el.addEventListener('input', () => {
+        if (etouched.has(name) || esubmitAttempted) refreshEField(name);
+        else refreshEButton();
+      });
+      el.addEventListener('change', () => {
+        if (etouched.has(name) || esubmitAttempted) refreshEField(name);
+        else refreshEButton();
+      });
+    });
+    efields.start.addEventListener('change', () => {
+      if (etouched.has('end') || esubmitAttempted) refreshEField('end');
+      refreshEButton();
+    });
+
+    function showEditError(msg) {
+      editErr.textContent = msg;
+      editErr.style.display = 'block';
+      clearTimeout(showEditError._t);
+      showEditError._t = setTimeout(() => editErr.style.display = 'none', 6000);
+    }
+    function clearEditError() {
+      editErr.textContent = '';
+      editErr.style.display = 'none';
+    }
+
+    function openEditModal() {
+      Object.keys(efields).forEach(k => { efields[k].value = initial[k]; });
+      etouched.clear();
+      esubmitAttempted = false;
+      Object.keys(eerrors).forEach(k => {
+        eerrors[k].textContent = '';
+        efields[k].classList.remove('input-invalid');
+      });
+      clearEditError();
+      editBtn.disabled = true;
+      editModal.classList.add('open');
+      if (sharePanel) sharePanel.classList.remove('open');
+    }
+    function closeEditModal() { editModal.classList.remove('open'); }
+
+    btnEdit.addEventListener('click', openEditModal);
+    document.getElementById('btn-close-edit').addEventListener('click', closeEditModal);
+    document.getElementById('btn-cancel-edit').addEventListener('click', closeEditModal);
+    editModal.addEventListener('click', (e) => {
+      if (e.target === editModal) closeEditModal();
+    });
+
+    editForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      esubmitAttempted = true;
+      Object.keys(efields).forEach(renderEField);
+      refreshEButton();
+
+      const allOk = Object.keys(echecks).every(n => echecks[n]().ok);
+      if (!allOk) {
+        showEditError("Veuillez corriger les erreurs du formulaire.");
+        return;
+      }
+
+      clearEditError();
+      editBtn.disabled = true;
+      editBtn.dataset.t = editBtn.textContent.trim();
+      editBtn.textContent = 'Enregistrement…';
+
+      try {
+        const res = await fetch(editForm.action, {
+          method: 'POST',
+          body: new FormData(editForm),
+          headers: { 'Accept': 'application/json',
+                     'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+        });
+        const data = await res.json();
+        if (data.ok) { window.location.href = data.redirect; return; }
+        showEditError(data.error || 'Erreur inconnue.');
+      } catch (err) {
+        showEditError('Erreur réseau.');
+      } finally {
+        editBtn.disabled = false;
+        editBtn.textContent = editBtn.dataset.t || 'Save changes';
+      }
+    });
+
+    editBtn.disabled = true;
+  }
+</script>
+
+{% endblock %}

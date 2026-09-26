@@ -1,0 +1,94 @@
+{% extends "base_users.html" %}
+{% block title %}Espace employé · Veridoc{% endblock %}
+{% block content %}
+
+<div class="header-row animate-rise">
+  <div>
+    <p class="eyebrow">Espace employé</p>
+    <h1 class="page-title">Pilotez les validations.</h1>
+    <p class="subtitle">Retrouvez les contrats de votre équipe, les documents à relire et la trace des actions sensibles.</p>
+  </div>
+  <a href="{{ url_for('employee.contracts') }}" class="btn">Ouvrir la file contrats
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+  </a>
+</div>
+
+<div class="stat-grid">
+  <div class="panel stat-card animate-rise delay-1">
+    <div class="stat-top">File de validation
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="hsl(174 52% 36%)" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    </div>
+    <p class="stat-value">{{ review_queue|length }}</p>
+    <p class="stat-sub">Contrats partagés ou validés</p>
+  </div>
+  <div class="panel stat-card animate-rise delay-2">
+    <div class="stat-top">Brouillons
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+    </div>
+    <p class="stat-value">{{ drafts|length }}</p>
+    <p class="stat-sub">À préparer ou compléter</p>
+  </div>
+  <div class="panel stat-card animate-rise delay-3">
+    <div class="stat-top">Accès équipe
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <p class="stat-value">RBAC</p>
+    <p class="stat-sub">Permissions par contrat</p>
+  </div>
+</div>
+
+<div class="detail-grid animate-rise delay-3" style="grid-template-columns:1.2fr .8fr;">
+  <section class="panel section-card">
+    <div class="section-head">
+      <div>
+        <h2>Contrats à traiter</h2>
+        <p>Priorisez les documents qui attendent une action.</p>
+      </div>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="hsl(214 17% 48%)" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    </div>
+    {% if review_queue|length == 0 %}
+      <div class="empty-state">La file de validation est vide.</div>
+    {% else %}
+      <div class="row-list">
+        {% for c in review_queue %}
+        <a href="{{ url_for('employee.contract_detail', contract_id=c.id) }}" class="row-item">
+          <span class="icon-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+          </span>
+          <div class="row-main">
+            <p class="title">{{ c.title }}</p>
+            <p class="meta">Propriétaire : {{ c.owner_name }}</p>
+          </div>
+          <span class="pill {{ c.status|lower }}">{{ c.status }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="panel section-card">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="hsl(174 52% 36%)" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      <h2 style="margin:0;font-size:15px;font-weight:800;letter-spacing:-.02em;">Contrôle documentaire</h2>
+    </div>
+    <p style="margin-top:12px;font-size:12px;line-height:1.6;color:hsl(var(--muted-foreground));">
+      Chaque contrat affiche son état d'intégrité avant qu'une action de validation ou de signature ne soit disponible.
+    </p>
+    <div style="margin-top:22px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;border-radius:8px;background:hsl(var(--secondary) / .6);padding:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+        <span style="font-size:12px;font-weight:600;">Vérification d'intégrité active</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;border-radius:8px;background:hsl(var(--secondary) / .6);padding:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(174 52% 36%)" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <span style="font-size:12px;font-weight:600;">Permissions relues côté serveur</span>
+      </div>
+      <a href="{{ url_for('employee.contracts') }}" style="margin-top:4px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:hsl(var(--primary));">
+        Voir tous les contrats
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+      </a>
+    </div>
+  </section>
+</div>
+
+{% endblock %}

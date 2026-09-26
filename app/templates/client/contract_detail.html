@@ -1,0 +1,435 @@
+{% extends "base_users.html" %}
+{% block title %}{{ contract.title }} · Veridoc{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('client.contracts') }}" class="back-link">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+  </svg>
+  Back to contracts
+</a>
+
+<div class="detail-head animate-rise">
+  <div class="left">
+    <span class="file-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/><path d="m9 15 2 2 4-4"/>
+      </svg>
+    </span>
+    <div>
+      <div class="title-row">
+        <h1>{{ contract.title }}</h1>
+        <span class="pill {{ contract.status|lower }}">{{ contract.status }}</span>
+      </div>
+      <p class="owner-meta">
+        Owned by <strong style="color:hsl(var(--foreground));">{{ contract.owner_name }}</strong>
+        · Version {{ contract.version }}
+        · Updated {{ contract.updated_at_str }}
+      </p>
+    </div>
+  </div>
+
+  <div class="actions">
+    {% if 'download' in contract.permissions %}
+    <a class="btn outline" href="{{ url_for('client.download_contract', contract_id=contract.id) }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>
+      </svg>
+      Download
+    </a>
+    {% endif %}
+
+    <button class="btn outline" id="btn-preview" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      Preview
+    </button>
+
+    {# La permission `sign` donne aussi le droit de valider #}
+    {% if contract.status == 'SHARED' and 'sign' in contract.permissions %}
+    <button class="btn" id="btn-validate" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+      </svg>
+      Validate contract
+    </button>
+    {% endif %}
+
+    {% if contract.status == 'VALIDATED' and 'sign' in contract.permissions %}
+    <button class="btn" id="btn-sign" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+      </svg>
+      Sign contract
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Bannière d'erreur -->
+<div id="action-error" class="modal-error" style="display:none;"></div>
+
+<!-- Métadonnées -->
+<div class="panel animate-rise delay-1" style="border-radius:12px;padding:16px;margin-bottom:20px;">
+  <p class="label" style="margin:0 0 12px;">Contract metadata</p>
+  <div class="meta-grid">
+    <div><span class="meta-k">Type</span><span class="meta-v">{{ contract.contract_type }}</span></div>
+    <div><span class="meta-k">Client</span><span class="meta-v">{{ contract.client_name }}</span></div>
+    <div><span class="meta-k">Start date</span><span class="meta-v">{{ contract.start_date_str }}</span></div>
+    <div><span class="meta-k">End date</span><span class="meta-v">{{ contract.end_date_str }}</span></div>
+  </div>
+  <p style="margin-top:14px;font-size:12px;line-height:1.6;color:hsl(var(--muted-foreground));">
+    {{ contract.description }}
+  </p>
+</div>
+
+<!-- Bloc signature -->
+{% if contract.status == 'SIGNED' %}
+<div class="signature-box animate-rise delay-1">
+  <div class="sig-head">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="hsl(174 52% 36%)" stroke-width="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+      <path d="m9 12 2 2 4-4"/>
+    </svg>
+    <div>
+      <p class="sig-title">Contrat signé cryptographiquement</p>
+      <p class="sig-sub">RSA-3072 · PSS · SHA-256</p>
+    </div>
+    <button class="btn outline sm" id="btn-verify-signature" type="button">
+      Verify signature
+    </button>
+  </div>
+  <div id="sig-verification" class="sig-result" style="display:none;"></div>
+</div>
+{% endif %}
+
+<div class="detail-grid animate-rise delay-1">
+  <section class="panel section-card">
+    <div class="lifecycle-head">
+      <div>
+        <p class="label">Lifecycle</p>
+        <h2>Suivi de validation</h2>
+      </div>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="hsl(214 17% 48%)" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+
+    <div class="timeline">
+      {% set steps = [('DRAFT','Created','Draft created and ready for internal review'),
+                       ('SHARED','Shared','Permissions granted to external collaborators'),
+                       ('VALIDATED','Validated','Integrity check passed'),
+                       ('SIGNED','Signed','Agreement completed and signed')] %}
+      {% set states = ['DRAFT','SHARED','VALIDATED','SIGNED'] %}
+      {% set current = states.index(contract.status) %}
+      {% for key, label, detail in steps %}
+      <div class="step">
+        <div class="dot {{ 'complete' if loop.index0 <= current else '' }}">
+          {% if loop.index0 <= current %}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+          {% else %}{{ loop.index }}{% endif %}
+        </div>
+        {% if not loop.last %}
+        <div class="line {{ 'complete' if loop.index0 < current else '' }}"></div>
+        {% endif %}
+        <div class="step-body">
+          <p class="t {{ 'done' if loop.index0 <= current else '' }}">{{ label }}</p>
+          <p class="d">{{ detail }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <aside style="display:flex;flex-direction:column;gap:22px;">
+    <div class="panel aside-card">
+      <p class="label">Document integrity</p>
+      <div class="integrity-row">
+        <span class="badge-circle {{ 'ok' if contract.integrity=='VERIFIED' else '' }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+          </svg>
+        </span>
+        <div>
+          <span class="pill {{ 'verified' if contract.integrity=='VERIFIED' else 'unverified' }}">
+            {{ contract.integrity }}
+          </span>
+          <p class="checked-at">HMAC-SHA256 verified</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel aside-card">
+      <p class="label">Your permissions</p>
+      {% if contract.permissions %}
+      <div class="perm-tags">
+        {% for p in contract.permissions %}<span class="perm-tag">{{ p }}</span>{% endfor %}
+      </div>
+      {% else %}
+      <p style="margin-top:14px;font-size:12px;color:hsl(var(--muted-foreground));">
+        No permissions.
+      </p>
+      {% endif %}
+    </div>
+  </aside>
+</div>
+
+<!-- ====================== MODAL PREVIEW PDF ====================== -->
+<div class="modal-overlay" id="preview-modal">
+  <div class="modal modal-preview">
+    <div class="modal-head">
+      <h2>{{ contract.title }}</h2>
+      <button class="icon-btn" id="btn-close-preview" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="preview-body">
+      <iframe id="pdf-frame" src="" title="PDF preview"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== MODAL CONFIRM VALIDATE ====================== -->
+<div class="modal-overlay" id="confirm-validate-modal">
+  <div class="modal modal-confirm">
+    <div class="modal-head">
+      <div class="confirm-icon confirm-icon-validate">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+        </svg>
+      </div>
+      <h2>Confirmer la validation</h2>
+      <button class="icon-btn" id="btn-close-validate" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="confirm-intro">
+      Vous êtes sur le point de valider ce contrat.
+    </p>
+
+    <div class="confirm-recap">
+      <div class="confirm-row"><span>Contrat</span><strong>{{ contract.title }}</strong></div>
+      <div class="confirm-row"><span>Version</span><strong>{{ contract.version }}</strong></div>
+      <div class="confirm-row"><span>Propriétaire</span><strong>{{ contract.owner_name }}</strong></div>
+      <div class="confirm-row"><span>Date</span><strong>{{ contract.updated_at_str }}</strong></div>
+    </div>
+
+    <p class="confirm-warning">
+      Après validation, vous pourrez signer cryptographiquement ce contrat.
+    </p>
+
+    <div class="modal-actions">
+      <button type="button" class="btn outline" id="btn-cancel-validate">Annuler</button>
+      <button type="button" class="btn" id="btn-confirm-validate">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+        Confirmer la validation
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== MODAL CONFIRM SIGN ====================== -->
+<div class="modal-overlay" id="confirm-sign-modal">
+  <div class="modal modal-confirm">
+    <div class="modal-head">
+      <div class="confirm-icon confirm-icon-sign">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        </svg>
+      </div>
+      <h2>Confirmer la signature</h2>
+      <button class="icon-btn" id="btn-close-sign" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="confirm-intro">
+      Vous êtes sur le point de signer <strong>cryptographiquement</strong> ce contrat.
+    </p>
+
+    <div class="confirm-recap">
+      <div class="confirm-row"><span>Contrat</span><strong>{{ contract.title }}</strong></div>
+      <div class="confirm-row"><span>Version</span><strong>{{ contract.version }}</strong></div>
+      <div class="confirm-row"><span>Propriétaire</span><strong>{{ contract.owner_name }}</strong></div>
+      <div class="confirm-row"><span>Algorithme</span><strong>RSA-3072 · PSS · SHA-256</strong></div>
+    </div>
+
+    <p class="confirm-warning">
+      ⚠ Après signature, le document ne pourra <strong>plus être modifié</strong>.
+    </p>
+
+    <div class="modal-actions">
+      <button type="button" class="btn outline" id="btn-cancel-sign">Annuler</button>
+      <button type="button" class="btn" id="btn-confirm-sign">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+        Confirmer la signature
+      </button>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce() }}">
+  const errBox = document.getElementById('action-error');
+
+  function showError(msg) {
+    errBox.textContent = msg;
+    errBox.style.display = 'block';
+    setTimeout(() => errBox.style.display = 'none', 6000);
+  }
+
+  async function postAction(url, btn, label) {
+    btn.disabled = true;
+    btn.dataset.t = btn.textContent.trim();
+    btn.textContent = label + '…';
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': '{{ csrf_token() }}',
+        },
+        credentials: 'same-origin',
+      });
+      const data = await res.json();
+      if (data.ok) {
+        window.location.href = data.redirect;
+        return;
+      }
+      showError(data.error || 'Erreur inconnue.');
+    } catch (err) {
+      showError('Erreur réseau.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.t || 'Recharger';
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  //  PREVIEW PDF
+  // ---------------------------------------------------------------------
+  const previewModal = document.getElementById('preview-modal');
+  const pdfFrame     = document.getElementById('pdf-frame');
+  const btnPreview   = document.getElementById('btn-preview');
+
+  if (btnPreview) {
+    btnPreview.addEventListener('click', () => {
+      pdfFrame.src = '{{ url_for("client.preview_contract", contract_id=contract.id) }}';
+      previewModal.classList.add('open');
+    });
+  }
+  function closePreview() {
+    previewModal.classList.remove('open');
+    pdfFrame.src = '';
+  }
+  document.getElementById('btn-close-preview').addEventListener('click', closePreview);
+  previewModal.addEventListener('click', (e) => {
+    if (e.target === previewModal) closePreview();
+  });
+
+  // ---------------------------------------------------------------------
+  //  CONFIRM VALIDATE
+  // ---------------------------------------------------------------------
+  const validateModal = document.getElementById('confirm-validate-modal');
+  const btnValidate   = document.getElementById('btn-validate');
+
+  if (btnValidate) {
+    btnValidate.addEventListener('click', () => validateModal.classList.add('open'));
+  }
+  document.getElementById('btn-close-validate').addEventListener('click',
+    () => validateModal.classList.remove('open'));
+  document.getElementById('btn-cancel-validate').addEventListener('click',
+    () => validateModal.classList.remove('open'));
+  validateModal.addEventListener('click', (e) => {
+    if (e.target === validateModal) validateModal.classList.remove('open');
+  });
+
+  const btnConfirmValidate = document.getElementById('btn-confirm-validate');
+  if (btnConfirmValidate) {
+    btnConfirmValidate.addEventListener('click', async () => {
+      validateModal.classList.remove('open');
+      await postAction(
+        '{{ url_for("client.validate_contract", contract_id=contract.id) }}',
+        btnValidate, 'Validation'
+      );
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  //  CONFIRM SIGN
+  // ---------------------------------------------------------------------
+  const signModal  = document.getElementById('confirm-sign-modal');
+  const btnSign    = document.getElementById('btn-sign');
+
+  if (btnSign) {
+    btnSign.addEventListener('click', () => signModal.classList.add('open'));
+  }
+  document.getElementById('btn-close-sign').addEventListener('click',
+    () => signModal.classList.remove('open'));
+  document.getElementById('btn-cancel-sign').addEventListener('click',
+    () => signModal.classList.remove('open'));
+  signModal.addEventListener('click', (e) => {
+    if (e.target === signModal) signModal.classList.remove('open');
+  });
+
+  const btnConfirmSign = document.getElementById('btn-confirm-sign');
+  if (btnConfirmSign) {
+    btnConfirmSign.addEventListener('click', async () => {
+      signModal.classList.remove('open');
+      await postAction(
+        '{{ url_for("client.sign_contract", contract_id=contract.id) }}',
+        btnSign, 'Signature'
+      );
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  //  VERIFY SIGNATURE
+  // ---------------------------------------------------------------------
+  const btnVerify = document.getElementById('btn-verify-signature');
+  if (btnVerify) {
+    btnVerify.addEventListener('click', async () => {
+      const box = document.getElementById('sig-verification');
+      box.style.display = 'block';
+      box.textContent = 'Vérification…';
+      box.className = 'sig-result';
+
+      try {
+        const res = await fetch(
+          '{{ url_for("client.verify_signature", contract_id=contract.id) }}',
+          { headers: { 'Accept': 'application/json' } }
+        );
+        const data = await res.json();
+
+        if (data.ok) {
+          box.className = 'sig-result ok';
+          box.innerHTML = `✓ Signature authentique — signée par
+            <strong>${data.signer.name}</strong> (${data.signer.email})`;
+        } else {
+          box.className = 'sig-result error';
+          box.textContent = `✗ Signature invalide (${data.reason})`;
+        }
+      } catch (err) {
+        box.className = 'sig-result error';
+        box.textContent = 'Erreur réseau.';
+      }
+    });
+  }
+</script>
+
+{% endblock %}

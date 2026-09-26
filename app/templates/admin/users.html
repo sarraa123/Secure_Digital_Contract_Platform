@@ -29,9 +29,18 @@
 
     <main class="app-main">
 
-        <div class="app-header">
-            <span class="eyebrow">Admin</span>
-            <h1>Utilisateurs en attente</h1>
+        <div class="app-header app-header-row">
+            <div>
+                <span class="eyebrow">Admin</span>
+                <h1>Utilisateurs en attente</h1>
+            </div>
+
+            <a href="{{ url_for('admin.create_manager_account') }}" class="btn-cta">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                Créer un gestionnaire
+            </a>
         </div>
 
         {% if users %}

@@ -1,8 +1,8 @@
 Flask
 Flask-SQLAlchemy
+Flask-WTF
 Flask-Migrate
 Flask-Login
-Flask-WTF
 argon2-cffi
 cryptography
 python-dotenv
@@ -11,3 +11,4 @@ pytest-flask
 bandit
 pip-audit
 email-validator
+flask-talisman
