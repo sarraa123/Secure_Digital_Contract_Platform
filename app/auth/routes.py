@@ -1,13 +1,4 @@
 from urllib.parse import urljoin, urlparse
-
-from flask import Blueprint, flash, redirect, render_template, url_for
-
-from app.models import User
-
-from .forms import RegistrationForm
-from .services import create_pending_user
-from datetime import datetime, timedelta
-from flask_login import login_required
 from datetime import datetime, timedelta
 
 from flask import (
@@ -19,9 +10,9 @@ from flask import (
     session,
     url_for,
 )
-
 from flask_login import (
     current_user,
+    login_required,
     login_user,
     logout_user,
 )
@@ -33,11 +24,17 @@ from app.security.rate_limit import (
     register_failed_login,
 )
 
-from .forms import LoginForm, RegistrationForm
+from .forms import (
+    LoginForm,
+    RegistrationForm,
+    ChangePasswordForm,
+)
 from .services import (
     authenticate_user,
     create_pending_user,
+    change_user_password,
 )
+
 
 auth_bp = Blueprint(
     "auth",
@@ -78,7 +75,6 @@ def _is_safe_redirect_url(request, target):
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
-
     form = RegistrationForm()
 
     if form.validate_on_submit():
@@ -136,14 +132,17 @@ def registration_success():
         "auth/registration_success.html"
     )
 
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
+
     if current_user.is_authenticated:
         return _redirect_after_login(current_user)
 
     form = LoginForm()
 
     if form.validate_on_submit():
+
         email = form.email.data.strip().lower()
         password = form.password.data
 
@@ -151,20 +150,36 @@ def login():
 
         rate_limit_key = f"{client_ip}:{email}"
 
+        # ==========================================
+        # BRUTE FORCE PROTECTION
+        # ==========================================
+
         if is_login_blocked(rate_limit_key):
+
             flash(
                 "Trop de tentatives. Veuillez réessayer dans quelques instants.",
                 "danger",
             )
+
             return render_template(
                 "auth/login.html",
                 form=form,
             ), 429
 
-        user = authenticate_user(email, password)
+        # ==========================================
+        # AUTHENTICATION
+        # ==========================================
+
+        user = authenticate_user(
+            email,
+            password,
+        )
 
         if user is None:
-            register_failed_login(rate_limit_key)
+
+            register_failed_login(
+                rate_limit_key
+            )
 
             flash(
                 "Email ou mot de passe invalide.",
@@ -176,7 +191,16 @@ def login():
                 form=form,
             ), 401
 
+        # ==========================================
+        # ACCOUNT STATUS
+        # ==========================================
+
+        # IMPORTANT :
+        # PENDING / REJECTED users never receive
+        # an authenticated session.
+
         if user.status != "ACTIVE":
+
             flash(
                 "Votre compte n'est pas encore actif.",
                 "warning",
@@ -187,10 +211,18 @@ def login():
                 form=form,
             ), 403
 
-        clear_failed_logins(rate_limit_key)
+        # Successful authentication:
+        # reset failed login attempts.
+        clear_failed_logins(
+            rate_limit_key
+        )
 
-        # Session fixation mitigation:
-        # remove any existing session data before authentication.
+        # ==========================================
+        # SESSION FIXATION PROTECTION
+        # ==========================================
+
+        # Remove any existing session data
+        # before creating the authenticated session.
         session.clear()
 
         login_user(
@@ -199,16 +231,34 @@ def login():
             fresh=True,
         )
 
-        session.permanent = True
-        session["login_at"] = datetime.utcnow().isoformat()
-        session["last_activity"] = datetime.utcnow().isoformat()
+        # ==========================================
+        # SESSION TIMESTAMPS
+        # ==========================================
 
-        user.last_login_at = datetime.utcnow()
+        session.permanent = True
+
+        now = datetime.utcnow()
+
+        session["login_at"] = now.isoformat()
+
+        session["last_activity"] = now.isoformat()
+
+        # ==========================================
+        # LAST LOGIN
+        # ==========================================
+
+        user.last_login_at = now
 
         from app import db
 
         db.session.commit()
 
+        # ==========================================
+        # REDIRECT
+        # ==========================================
+
+        # Redirection sécurisée vers `next` si valide,
+        # sinon vers le dashboard du rôle.
         next_url = request.args.get("next")
         if next_url and _is_safe_redirect_url(request, next_url):
             return redirect(next_url)
@@ -220,26 +270,51 @@ def login():
         form=form,
     )
 
+
 @auth_bp.route("/dashboard")
 @login_required
 def dashboard():
+
     return render_template(
         "auth/dashboard.html",
         user=current_user,
     )
 
 
+# ==================================================
+# SESSION TIMEOUT ENFORCEMENT
+# ==================================================
+
 @auth_bp.before_app_request
 def enforce_session_timeout():
+
+    # No authenticated user:
+    # nothing to enforce.
     if not current_user.is_authenticated:
+        return None
+
+    # Never block static assets.
+    if request.endpoint == "static":
         return None
 
     now = datetime.utcnow()
 
-    login_at_raw = session.get("login_at")
-    last_activity_raw = session.get("last_activity")
+    login_at_raw = session.get(
+        "login_at"
+    )
 
+    last_activity_raw = session.get(
+        "last_activity"
+    )
+
+    # ==========================================
+    # SESSION DATA INTEGRITY
+    # ==========================================
+
+    # If the authenticated session does not contain
+    # the expected timestamps, invalidate it.
     if not login_at_raw or not last_activity_raw:
+
         logout_user()
         session.clear()
 
@@ -248,19 +323,45 @@ def enforce_session_timeout():
             "warning",
         )
 
-        return redirect(url_for("auth.login"))
+        return redirect(
+            url_for("auth.login")
+        )
 
     try:
-        login_at = datetime.fromisoformat(login_at_raw)
-        last_activity = datetime.fromisoformat(last_activity_raw)
+
+        login_at = datetime.fromisoformat(
+            login_at_raw
+        )
+
+        last_activity = datetime.fromisoformat(
+            last_activity_raw
+        )
+
     except ValueError:
+
         logout_user()
         session.clear()
 
-        return redirect(url_for("auth.login"))
+        flash(
+            "Votre session est invalide. Veuillez vous reconnecter.",
+            "warning",
+        )
 
-    # Absolute lifetime: 8 hours
-    if now - login_at > timedelta(hours=8):
+        return redirect(
+            url_for("auth.login")
+        )
+
+    # ==========================================
+    # ABSOLUTE SESSION TIMEOUT
+    # ==========================================
+
+    # Maximum authenticated session lifetime:
+    # 8 hours from login.
+
+    if now - login_at > timedelta(
+        hours=8
+    ):
+
         logout_user()
         session.clear()
 
@@ -269,10 +370,19 @@ def enforce_session_timeout():
             "warning",
         )
 
-        return redirect(url_for("auth.login"))
+        return redirect(
+            url_for("auth.login")
+        )
 
-    # Inactivity timeout: 15 minutes
+    # ==========================================
+    # INACTIVITY TIMEOUT
+    # ==========================================
+
+    # Maximum inactivity:
+    # 15 minutes.
+
     if now - last_activity > timedelta(minutes=15):
+
         logout_user()
         session.clear()
 
@@ -281,16 +391,38 @@ def enforce_session_timeout():
             "warning",
         )
 
-        return redirect(url_for("auth.login"))
+        return redirect(
+            url_for("auth.login")
+        )
+
+    # ==========================================
+    # FORCE PASSWORD CHANGE
+    # ==========================================
+
+    if (
+        current_user.must_change_password
+        and request.endpoint != "auth.change_password"
+        and request.endpoint != "auth.logout"
+    ):
+        return redirect(
+            url_for("auth.change_password")
+        )
 
     session["last_activity"] = now.isoformat()
 
     return None
 
+
+# ==================================================
+# LOGOUT
+# ==================================================
+
 @auth_bp.post("/logout")
 @login_required
 def logout():
+
     logout_user()
+
     session.clear()
 
     flash(
@@ -298,4 +430,48 @@ def logout():
         "success",
     )
 
-    return redirect(url_for("auth.login"))
+    return redirect(
+        url_for("auth.login")
+    )
+
+
+# ==================================================
+# CHANGE PASSWORD
+# ==================================================
+
+@auth_bp.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+
+    form = ChangePasswordForm()
+
+    if form.validate_on_submit():
+
+        if not change_user_password(
+            current_user,
+            form.current_password.data,
+            form.new_password.data,
+        ):
+            flash(
+                "Le mot de passe actuel est incorrect.",
+                "danger",
+            )
+
+            return render_template(
+                "auth/change_password.html",
+                form=form,
+            ), 401
+
+        flash(
+            "Votre mot de passe a été modifié avec succès.",
+            "success",
+        )
+
+        return redirect(
+            url_for("auth.dashboard")
+        )
+
+    return render_template(
+        "auth/change_password.html",
+        form=form,
+    )

@@ -11,6 +11,7 @@ def _key(name: str) -> bytes:
         raise RuntimeError(f"{name} manquante ou invalide (64 hex attendus).")
     return bytes.fromhex(raw)
 
+
 class Config:
     
     SECRET_KEY = os.getenv("SECRET_KEY")
@@ -26,19 +27,35 @@ class Config:
     # SESSION SECURITY
     # =========================
 
+    # Empêche JavaScript côté navigateur
+    # d'accéder directement au cookie de session.
     SESSION_COOKIE_HTTPONLY = True
 
+    # Empêche les requêtes cross-site classiques
+    # d'envoyer automatiquement le cookie.
     SESSION_COOKIE_SAMESITE = "Strict"
 
+    # En développement local avec HTTP :
+    # False.
+    #
+    # En production avec HTTPS :
+    # mettre SESSION_COOKIE_SECURE=True dans .env.
     SESSION_COOKIE_SECURE = os.getenv(
         "SESSION_COOKIE_SECURE",
         "False"
     ).lower() == "true"
 
+    # Nom explicite du cookie de session.
     SESSION_COOKIE_NAME = "scp_session"
 
-    PERMANENT_SESSION_LIFETIME = timedelta(minutes=15)
+    # La session ne peut pas dépasser 8 heures.
+    #
+    # Le timeout d'inactivité de 15 minutes
+    # est géré séparément dans routes.py.
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
 
+    # On ne demande pas à Flask de renouveler
+    # automatiquement la durée à chaque requête.
     SESSION_REFRESH_EACH_REQUEST = False
 
     # Flask-Login session protection

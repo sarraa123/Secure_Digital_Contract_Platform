@@ -2,13 +2,16 @@ from datetime import datetime, timezone
 
 from flask_login import UserMixin
 
-from app.extensions import db
+from app import db
 
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
     username = db.Column(
         db.String(80),
@@ -39,6 +42,12 @@ class User(UserMixin, db.Model):
         default="PENDING"
     )
 
+    must_change_password = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
@@ -55,13 +64,20 @@ class User(UserMixin, db.Model):
         db.DateTime(timezone=True),
         nullable=True
     )
-      # --- Signature numérique RSA (CDC CRYP-08) ---
-    private_key_encrypted = db.Column(db.LargeBinary, nullable=True)
-    public_key_pem        = db.Column(db.Text,       nullable=True)
+
+    # --- Signature numérique RSA (CDC CRYP-08) ---
+    private_key_encrypted = db.Column(
+        db.LargeBinary,
+        nullable=True
+    )
+    public_key_pem = db.Column(
+        db.Text,
+        nullable=True
+    )
 
     def __repr__(self):
         return f"<User {self.username}>"
-    
+
     @property
     def has_signing_keys(self) -> bool:
         return bool(self.private_key_encrypted and self.public_key_pem)
