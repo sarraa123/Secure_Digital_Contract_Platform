@@ -65,3 +65,21 @@ class Config:
     INTEGRITY_KEY           = _key("INTEGRITY_KEY")            # HMAC-SHA256
 
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10 Mo
+
+    # =========================
+    # EMAIL (Gmail SMTP)
+    # =========================
+    # MAIL_USERNAME : votre adresse Gmail
+    # MAIL_PASSWORD : un "mot de passe d'application" Gmail
+    #   (myaccount.google.com/apppasswords), PAS votre mot de passe normal
+    #   (nécessite la validation en 2 étapes activée sur le compte Gmail).
+    # MAIL_SUPPRESS_SEND=True en dev : n'envoie rien, se contente de logger.
+    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
+    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
+    MAIL_SUPPRESS_SEND = os.getenv(
+        "MAIL_SUPPRESS_SEND", "False"
+    ).lower() == "true"

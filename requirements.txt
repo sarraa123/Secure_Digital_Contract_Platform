@@ -11,3 +11,4 @@ pytest-flask
 bandit
 pip-audit
 email-validator
+flask-talisman

@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 
 .env
-
+env/
 instance/
 .pytest_cache/
 
@@ -14,3 +14,4 @@ instance/
 *.sqlite3
 storage/
 *.pyo
+migrations_backup/

@@ -2,6 +2,7 @@ from app.extensions import db
 from app.auth.services import hash_password
 from app.models import User
 from app.services.crypto_service import generate_keypair
+from app.services.mail_service import send_manager_account_email
 
 
 def approve_user(user: User) -> User:
@@ -56,5 +57,7 @@ def create_manager(
 
     db.session.add(manager)
     db.session.commit()
+
+    send_manager_account_email(manager, temporary_password)
 
     return manager

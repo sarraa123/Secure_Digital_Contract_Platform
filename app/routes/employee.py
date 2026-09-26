@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 from io import BytesIO
 
+from app.routes.client import current_client
 from app.services import contract_service
 from app.extensions import db
 
@@ -12,6 +13,7 @@ from flask_login import current_user
 from app.models import User, Contract
 from app.security import log_event
 from app.security.authorization import require_role
+from app.auth.services import change_user_password
 
 
 bp = Blueprint("employee", __name__, url_prefix="/employee")
@@ -404,7 +406,7 @@ def update_profile():
 
 @bp.route("/profile/password", methods=["POST"])
 def change_password():
-    """Change le mot de passe (placeholder pour la phase auth réelle)."""
+    """Change le mot de passe du client connecté."""
     wants_json = (
         request.accept_mimetypes.best == "application/json"
         or request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -414,9 +416,33 @@ def change_password():
         if wants_json:
             return {"ok": False, "error": msg}, status
         flash(msg, "error")
-        return redirect(url_for("employee.profile"))
+        return redirect(url_for("client.profile"))
 
-    log_event("PASSWORD_CHANGE_ATTEMPTED", user_id=current_employee().id,
-              status="400", details="auth not implemented yet")
+    user = current_client()
 
-    return fail("Fonctionnalité disponible après l'implémentation de l'authentification réelle.")
+    current_password = request.form.get("current_password", "").strip()
+    new_password     = request.form.get("new_password", "").strip()
+    confirm_password = request.form.get("confirm_password", "").strip()
+
+    if not current_password:
+        return fail("Mot de passe actuel requis.")
+
+    if len(new_password) < 12:
+        return fail("Le nouveau mot de passe doit faire au moins 12 caractères.")
+
+    if new_password != confirm_password:
+        return fail("Les deux mots de passe ne correspondent pas.")
+
+    if not change_user_password(user, current_password, new_password):
+        log_event("PASSWORD_CHANGE_FAILED", user_id=user.id,
+                  status="401", details="wrong current password")
+        return fail("Le mot de passe actuel est incorrect.", status=401)
+
+    log_event("PASSWORD_CHANGED", user_id=user.id,
+              status="200", details="success")
+
+    if wants_json:
+        return {"ok": True, "redirect": url_for("client.profile")}
+
+    flash("Votre mot de passe a été modifié.", "success")
+    return redirect(url_for("client.profile"))

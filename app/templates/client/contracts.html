@@ -73,7 +73,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   const searchInput = document.getElementById('client-search');
   const statusSel   = document.getElementById('client-status-filter');
   const rows        = document.querySelectorAll('#client-contracts-table tbody tr');

@@ -195,10 +195,6 @@ def login():
         # ACCOUNT STATUS
         # ==========================================
 
-        # IMPORTANT :
-        # PENDING / REJECTED users never receive
-        # an authenticated session.
-
         if user.status != "ACTIVE":
 
             flash(
@@ -211,8 +207,6 @@ def login():
                 form=form,
             ), 403
 
-        # Successful authentication:
-        # reset failed login attempts.
         clear_failed_logins(
             rate_limit_key
         )
@@ -221,8 +215,6 @@ def login():
         # SESSION FIXATION PROTECTION
         # ==========================================
 
-        # Remove any existing session data
-        # before creating the authenticated session.
         session.clear()
 
         login_user(
@@ -249,6 +241,19 @@ def login():
 
         user.last_login_at = now
 
+        # ==========================================
+        # GÉNÉRATION DES CLÉS RSA (1ère connexion)
+        # ==========================================
+
+        # À la première connexion, si l'utilisateur n'a
+        # pas encore de clés RSA, on les génère maintenant.
+        if not user.has_signing_keys:
+            from app.services.crypto_service import generate_keypair
+
+            private_key, public_key = generate_keypair()
+            user.private_key_encrypted = private_key
+            user.public_key_pem = public_key
+
         from app import db
 
         db.session.commit()
@@ -257,8 +262,6 @@ def login():
         # REDIRECT
         # ==========================================
 
-        # Redirection sécurisée vers `next` si valide,
-        # sinon vers le dashboard du rôle.
         next_url = request.args.get("next")
         if next_url and _is_safe_redirect_url(request, next_url):
             return redirect(next_url)
@@ -269,7 +272,6 @@ def login():
         "auth/login.html",
         form=form,
     )
-
 
 @auth_bp.route("/dashboard")
 @login_required
@@ -467,9 +469,8 @@ def change_password():
             "success",
         )
 
-        return redirect(
-            url_for("auth.dashboard")
-        )
+        # Redirection intelligente selon le rôle
+        return _redirect_after_login(current_user)   # ✅ vers le dashboard du rôle
 
     return render_template(
         "auth/change_password.html",

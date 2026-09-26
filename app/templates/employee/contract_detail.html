@@ -183,11 +183,16 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <label>
-      <span>Recipient email *</span>
-      <input class="input" type="email" name="email" id="share-email"
-             placeholder="alice@partner.com" required>
-    </label>
-
+  <span>Recipient email *</span>
+  <select class="input" name="email" id="share-email" required>
+    <option value="">— Sélectionnez un client —</option>
+    {% for c in clients %}
+      <option value="{{ c.email }}">
+        {{ c.username }} ({{ c.email }})
+      </option>
+    {% endfor %}
+  </select>
+</label>
     {# `validate` retiré : la permission `sign` implique `validate` #}
     <div class="perm-group" id="perm-group">
       {% for p in ['read','download','sign','share'] %}
@@ -348,7 +353,7 @@
 </div>
 
 <!-- ====================== SCRIPTS ====================== -->
-<script>
+<script nonce="{{ csp_nonce() }}">
   // Permissions toggle
   const permInput = document.getElementById('permissions-input');
   document.querySelectorAll('.perm-btn').forEach(btn => {
