@@ -1,15 +1,8 @@
 """
 Service de signature cryptographique RSA-PSS-SHA256.
-
-- La signature porte sur le **contenu signé** :
-  `encrypted_metadata + encrypted_file`
-  (on signe tout le contrat chiffré — cohérent avec "on chiffre tout")
-
+- La signature porte sur `encrypted_metadata + encrypted_file`.
 - La signature est stockée dans la table `signatures`, PAS dans le blob.
-  Cela évite que la modification du blob (pour y ajouter la signature)
-  n'invalide la signature elle-même.
-
-- La clé privée du signataire reste chiffrée en base, jamais exposée.
+- L'image manuscrite (si fournie) est stockée dans `signature_images`.
 
 Références CDC :
 - CRYP-02 : intégrité
@@ -21,25 +14,23 @@ import hashlib
 from datetime import datetime
 
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import hashes
 
 from app.extensions import db
-from app.models import User, Signature
+from app.models import User, Signature, SignatureImage
+from app.services import signature_image_service
 from app.services.crypto_service import (
     load_private_key, load_public_key,
     SIGNATURE_ALGORITHM,
     _PSS_PADDING,
 )
-from cryptography.hazmat.primitives import hashes
 
 
 # =========================================================================
 #  Hachage du contenu signé
 # =========================================================================
 def _signed_content(model) -> bytes:
-    """
-    Retourne les octets qui vont être signés / vérifiés :
-    concaténation du blob métadonnées chiffré et du fichier chiffré.
-    """
+    """Contenu signé : encrypted_metadata + encrypted_file."""
     return model.encrypted_metadata + model.encrypted_file
 
 
@@ -51,17 +42,17 @@ def _document_hash(data: bytes) -> str:
 # =========================================================================
 #  Création d'une signature
 # =========================================================================
-def create_signature(contract_model, signer: User) -> Signature:
+def create_signature(contract_model, signer: User,
+                     png_bytes: bytes = None) -> Signature:
     """
     Crée et persiste une signature RSA-PSS sur le contrat chiffré.
-    Lève une exception si la clé privée n'est pas disponible.
+    Si `png_bytes` est fourni, crée en plus une SignatureImage chiffrée.
     """
     private_key = load_private_key(signer)
 
     data = _signed_content(contract_model)
     doc_hash = _document_hash(data)
 
-    # Signature RSA-PSS-SHA256 sur le contenu signé
     signature_bytes = private_key.sign(data, _PSS_PADDING, hashes.SHA256())
 
     sig = Signature(
@@ -73,8 +64,21 @@ def create_signature(contract_model, signer: User) -> Signature:
         signed_at     = datetime.utcnow(),
     )
     db.session.add(sig)
-    db.session.commit()
+    db.session.flush()   # pour avoir sig.id
 
+    if png_bytes:
+        w, h = signature_image_service._png_dimensions(png_bytes)
+        img = SignatureImage(
+            signature_id    = sig.id,
+            encrypted_image = signature_image_service.encrypt_image(png_bytes),
+            image_mime      = "image/png",
+            image_hash      = signature_image_service.sha256_hex(png_bytes),
+            width           = w,
+            height          = h,
+        )
+        db.session.add(img)
+
+    db.session.commit()
     return sig
 
 
@@ -84,21 +88,15 @@ def create_signature(contract_model, signer: User) -> Signature:
 def verify_signature_for_contract(contract_model) -> dict:
     """
     Vérifie la signature stockée pour ce contrat.
-
-    Retourne :
-    {
-        "ok": bool,
-        "reason": str,
-        "signer": User | None,
-        "signature": Signature | None,
-    }
+    Vérifie aussi l'intégrité de l'image si présente.
 
     Raisons possibles :
-      - "no_signature"        : aucune signature en base
-      - "document_modified"   : le hash actuel ne correspond pas
-      - "invalid_signature"   : la signature RSA-PSS ne vérifie pas
-      - "signer_not_found"    : utilisateur inconnu
-      - "verified"            : tout est OK
+      - "no_signature"
+      - "document_modified"
+      - "invalid_signature"
+      - "signer_not_found"
+      - "image_integrity_failed"
+      - "verified"
     """
     sig = (Signature.query
            .filter_by(contract_id=contract_model.id)
@@ -114,15 +112,24 @@ def verify_signature_for_contract(contract_model) -> dict:
         return {"ok": False, "reason": "signer_not_found",
                 "signer": signer, "signature": sig}
 
-    # 1. Le hash du contenu actuel doit correspondre
     current_data = _signed_content(contract_model)
     current_hash = _document_hash(current_data)
-
     if current_hash != sig.document_hash:
         return {"ok": False, "reason": "document_modified",
                 "signer": signer, "signature": sig}
 
-    # 2. La signature RSA-PSS doit vérifier
+    # Intégrité de l'image si présente
+    if sig.signature_image is not None:
+        try:
+            png = signature_image_service.decrypt_image(
+                sig.signature_image.encrypted_image)
+            if signature_image_service.sha256_hex(png) != sig.signature_image.image_hash:
+                return {"ok": False, "reason": "image_integrity_failed",
+                        "signer": signer, "signature": sig}
+        except Exception:
+            return {"ok": False, "reason": "image_integrity_failed",
+                    "signer": signer, "signature": sig}
+
     try:
         public_key = load_public_key(signer)
         public_key.verify(

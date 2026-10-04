@@ -12,3 +12,8 @@ bandit
 pip-audit
 email-validator
 flask-talisman
+reportlab
+Flask-SocketIO 
+python-socketio 
+python-engineio 
+requests

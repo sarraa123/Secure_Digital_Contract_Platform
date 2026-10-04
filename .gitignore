@@ -15,3 +15,10 @@ instance/
 storage/
 *.pyo
 migrations_backup/
+
+# Certificats de développement
+dev-cert.pem
+dev-key.pem
+
+# Instance Flask
+instance/

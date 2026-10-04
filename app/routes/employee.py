@@ -197,12 +197,20 @@ def contract_detail(contract_id):
         abort(404)
     shares  = contract_service.list_permissions(contract_id)
     clients = User.query.filter_by(role="CLIENT").order_by(User.username).all()
+
+    # ← AJOUT
+    from app.models import AmendmentRequest
+    pending_amendment = AmendmentRequest.query.filter_by(
+        original_contract_id=contract_id,
+    ).filter(
+        AmendmentRequest.status.in_(["PENDING", "NEGOTIATING"])
+    ).first()
+
     return render_template("employee/contract_detail.html",
                            active="contract-detail",
                            breadcrumb="Contract detail",
-                           contract=view, shares=shares, clients=clients)
-
-
+                           contract=view, shares=shares, clients=clients,
+                           pending_amendment=pending_amendment) 
 def _slug(s):
     """Nettoie une chaîne pour un nom de fichier."""
     import re, unicodedata

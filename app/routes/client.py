@@ -10,6 +10,7 @@ from app.security import log_event
 from app.security.authorization import require_role
 
 from app.extensions import db
+
 bp = Blueprint("client", __name__, url_prefix="/client")
 
 
@@ -21,13 +22,10 @@ def _guard():
 
 @bp.context_processor
 def _inject_layout():
-    """Fournit `layout` et `user` à tous les templates de ce blueprint
-    (utilisés par la sidebar/topbar communes dans base_users.html)."""
     return {"layout": "client", "user": current_user}
 
 
 def current_client():
-    """Alias conservé pour lisibilité : renvoie l'utilisateur connecté."""
     return current_user
 
 
@@ -39,7 +37,6 @@ def dashboard():
     user = current_client()
     contracts = contract_service.list_contracts_for_user(user)
 
-    # Catégorisation pour la démo
     waiting    = [c for c in contracts
                   if c.status == "SHARED" and "validate" in c.permissions]
     ready_sign = [c for c in contracts
@@ -78,17 +75,24 @@ def contract_detail(contract_id):
     view = contract_service.load_contract(contract_id, user)
     if not view:
         abort(404)
+
+    # Vérifier s'il y a une demande d'avenant en cours
+    from app.models import AmendmentRequest
+    pending_amendment = AmendmentRequest.query.filter_by(
+        original_contract_id=contract_id,
+    ).filter(
+        AmendmentRequest.status.in_(["PENDING", "NEGOTIATING"])
+    ).first()
+
     return render_template("client/contract_detail.html",
                            active="client-contracts",
                            breadcrumb="Contract detail",
-                           contract=view)
-
-
+                           contract=view,
+                           pending_amendment=pending_amendment)
 # ---------------------------------------------------------------------------
 # Download
 # ---------------------------------------------------------------------------
 def _slug(s):
-    """Nettoie une chaîne pour un nom de fichier."""
     import re, unicodedata
     s = unicodedata.normalize("NFKD", str(s or ""))
     s = "".join(c for c in s if not unicodedata.combining(c))
@@ -99,7 +103,6 @@ def _slug(s):
 
 @bp.route("/contracts/<int:contract_id>/download")
 def download_contract(contract_id):
-    """Télécharge le PDF avec un nom intelligent."""
     user = current_client()
     blob = contract_service.decrypt_file_for_download(contract_id, user)
     if not blob:
@@ -124,7 +127,6 @@ def download_contract(contract_id):
 
 @bp.route("/contracts/<int:contract_id>/preview")
 def preview_contract(contract_id):
-    """Affiche le PDF en inline (aperçu navigateur)."""
     user = current_client()
     blob = contract_service.decrypt_file_for_download(contract_id, user)
     if not blob:
@@ -137,6 +139,8 @@ def preview_contract(contract_id):
         as_attachment=False,
         download_name=f"preview_{contract_id}.pdf",
     )
+
+
 # ---------------------------------------------------------------------------
 # Validate (AJAX)
 # ---------------------------------------------------------------------------
@@ -163,7 +167,7 @@ def validate_contract(contract_id):
 
 
 # ---------------------------------------------------------------------------
-# Sign (AJAX)
+# Sign (AJAX) — accepte signature_image
 # ---------------------------------------------------------------------------
 @bp.route("/contracts/<int:contract_id>/sign", methods=["POST"])
 def sign_contract(contract_id):
@@ -173,7 +177,13 @@ def sign_contract(contract_id):
         or request.headers.get("X-Requested-With") == "XMLHttpRequest"
     )
 
-    result = contract_service.sign_contract(contract_id, user)
+    signature_image_b64 = None
+    if request.is_json:
+        signature_image_b64 = (request.get_json(silent=True) or {}).get("signature_image")
+    else:
+        signature_image_b64 = request.form.get("signature_image")
+
+    result = contract_service.sign_contract(contract_id, user, signature_image_b64)
 
     if wants_json:
         if result["ok"]:
@@ -186,12 +196,14 @@ def sign_contract(contract_id):
           "success" if result["ok"] else "error")
     return redirect(url_for("client.contract_detail", contract_id=contract_id))
 
+
+# ---------------------------------------------------------------------------
+# Verify signature (AJAX)
+# ---------------------------------------------------------------------------
 @bp.route("/contracts/<int:contract_id>/verify-signature")
 def verify_signature(contract_id):
-    """Vérifie la signature RSA-PSS d'un contrat signé (AJAX)."""
     user = current_client()
 
-    # Charge d'abord le contrat pour vérifier que le user y a accès
     view = contract_service.load_contract(contract_id, user)
     if not view:
         abort(404)
@@ -207,9 +219,124 @@ def verify_signature(contract_id):
             "email": result["signer"].email,
         } if result["signer"] else None,
     }
+
+
+# ---------------------------------------------------------------------------
+# Certificat PDF de preuve
+# ---------------------------------------------------------------------------
+@bp.route("/contracts/<int:contract_id>/certificate")
+def download_certificate(contract_id):
+    from app.services import certificate_service
+    from app.models import Signature
+
+    user = current_client()
+    view = contract_service.load_contract(contract_id, user)
+    if not view:
+        abort(404)
+
+    sig = (Signature.query
+           .filter_by(contract_id=contract_id)
+           .order_by(Signature.signed_at.desc())
+           .first())
+    if not sig:
+        abort(404)
+
+    signer = db.session.get(User, sig.signer_id)
+    if not signer:
+        abort(404)
+
+    signer_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if signer_ip and "," in signer_ip:
+        signer_ip = signer_ip.split(",")[0].strip()
+
+    verify_url = url_for("client.verify_signature",
+                         contract_id=contract_id, _external=True)
+
+    pdf_bytes = certificate_service.build_certificate_pdf(
+        contract_view=view, signature=sig, signer=signer,
+        signer_ip=signer_ip, verify_url=verify_url,
+    )
+
+    log_event("CERTIFICATE_DOWNLOADED", user_id=user.id, status="OK",
+              details=f"contract_id={contract_id} format=pdf")
+
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"certificat_{_slug(view.title)[:60]}_{contract_id}.pdf",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Certificat cryptographique .txt
+# ---------------------------------------------------------------------------
+@bp.route("/contracts/<int:contract_id>/certificate-crypto")
+def download_certificate_crypto(contract_id):
+    from app.services import certificate_service
+    from app.models import Signature
+
+    user = current_client()
+    view = contract_service.load_contract(contract_id, user)
+    if not view:
+        abort(404)
+
+    sig = (Signature.query
+           .filter_by(contract_id=contract_id)
+           .order_by(Signature.signed_at.desc())
+           .first())
+    if not sig:
+        abort(404)
+
+    signer = db.session.get(User, sig.signer_id)
+    if not signer:
+        abort(404)
+
+    signer_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if signer_ip and "," in signer_ip:
+        signer_ip = signer_ip.split(",")[0].strip()
+
+    txt = certificate_service.build_certificate_crypto(
+        contract_view=view, signature=sig, signer=signer, signer_ip=signer_ip,
+    )
+
+    log_event("CERTIFICATE_DOWNLOADED", user_id=user.id, status="OK",
+              details=f"contract_id={contract_id} format=crypto")
+
+    return send_file(
+        BytesIO(txt.encode("utf-8")),
+        mimetype="text/plain",
+        as_attachment=True,
+        download_name=f"certificat_crypto_{_slug(view.title)[:60]}_{contract_id}.txt",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Certificat X.509 personnel
+# ---------------------------------------------------------------------------
+@bp.route("/profile/certificate")
+def download_x509_certificate():
+    user = current_client()
+
+    if not user.x509_certificate_pem:
+        log_event("X509_NOT_FOUND", user_id=user.id, status="404")
+        abort(404)
+
+    log_event("X509_DOWNLOADED", user_id=user.id, status="OK")
+
+    return send_file(
+        BytesIO(user.x509_certificate_pem.encode("utf-8")),
+        mimetype="application/x-pem-file",
+        as_attachment=True,
+        download_name=f"{_slug(user.username)}_certificate.pem",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Profile
+# ---------------------------------------------------------------------------
 @bp.route("/profile")
 def profile():
-    """Page profil (partagée avec l'employé via templates/profile.html)."""
     user = current_client()
 
     all_contracts = contract_service.list_contracts_for_user(user)
@@ -221,15 +348,16 @@ def profile():
     }
 
     return render_template(
-        "profile.html",              # ← chemin unique
+        "profile.html",
         active="client-profile",
         breadcrumb="Profile",
         profile_user=user,
         stats=stats,
     )
+
+
 @bp.route("/profile/update", methods=["POST"])
 def update_profile():
-    """Met à jour username + email."""
     user = current_client()
 
     username = (request.form.get("username") or "").strip()
@@ -274,7 +402,6 @@ def update_profile():
 
 @bp.route("/profile/password", methods=["POST"])
 def change_password():
-    """Change le mot de passe du client connecté."""
     wants_json = (
         request.accept_mimetypes.best == "application/json"
         or request.headers.get("X-Requested-With") == "XMLHttpRequest"

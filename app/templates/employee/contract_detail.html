@@ -1,5 +1,10 @@
 {% extends "base_users.html" %}
 {% block title %}{{ contract.title }} · Veridoc{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+{% endblock %}
+
 {% block content %}
 
 <!-- ====================== MODAL EDIT ====================== -->
@@ -183,17 +188,17 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <label>
-  <span>Recipient email *</span>
-  <select class="input" name="email" id="share-email" required>
-    <option value="">— Sélectionnez un client —</option>
-    {% for c in clients %}
-      <option value="{{ c.email }}">
-        {{ c.username }} ({{ c.email }})
-      </option>
-    {% endfor %}
-  </select>
-</label>
-    {# `validate` retiré : la permission `sign` implique `validate` #}
+      <span>Recipient email *</span>
+      <select class="input" name="email" id="share-email" required>
+        <option value="">— Sélectionnez un client —</option>
+        {% for c in clients %}
+          <option value="{{ c.email }}">
+            {{ c.username }} ({{ c.email }})
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+
     <div class="perm-group" id="perm-group">
       {% for p in ['read','download','sign','share'] %}
         <button type="button"
@@ -249,7 +254,44 @@
   {% endif %}
 </div>
 {% endif %}
-
+<!-- ====================== BANDEAU AVENANT ====================== -->
+{% if contract.status != 'SIGNED' and current_user.role in ('MANAGER', 'ADMIN') %}
+<div id="amendment-banner" class="panel animate-rise"
+     style="display:none; padding:16px; margin-bottom:20px;
+            background:#f0f9ff; border:1px solid #93c5fd;
+            border-radius:12px;">
+  <div style="display:flex; align-items:flex-start; gap:12px;">
+    <div style="font-size:24px;">💡</div>
+    <div style="flex:1;">
+      <p style="margin:0 0 8px; font-weight:600; color:#1e40af; font-size:14px;">
+        Ce contrat est un avenant
+      </p>
+      <p style="margin:0 0 12px; font-size:13px; color:#1e3a8a; line-height:1.5;">
+        Voulez-vous partager avec les mêmes personnes que le contrat original ?
+      </p>
+      <div id="amendment-share-list"
+           style="margin-bottom:12px; padding:10px; background:#ffffff;
+                  border-radius:8px; font-size:12px;">
+        <em style="color:#64748b;">Chargement…</em>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="btn-auto-share" type="button"
+                style="padding:8px 16px; background:#0d9488; color:#fff;
+                       border:none; border-radius:6px; cursor:pointer;
+                       font-weight:600; font-size:13px;">
+          ✅ Partager automatiquement
+        </button>
+        <button id="btn-dismiss-banner" type="button"
+                style="padding:8px 16px; background:#e2e8f0; color:#475569;
+                       border:none; border-radius:6px; cursor:pointer;
+                       font-weight:600; font-size:13px;">
+          Plus tard
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 <!-- ====================== METADATA ====================== -->
 <div class="panel animate-rise delay-1" style="border-radius:12px;padding:16px;margin-bottom:20px;">
   <p class="label" style="margin:0 0 12px;">Contract metadata</p>
@@ -352,6 +394,144 @@
   </div>
 </div>
 
+<!-- =====================================================================
+     CONFIGURATION DU CHAT
+     ===================================================================== -->
+<div id="chat-config"
+     data-contract-id="{{ contract.id }}"
+     data-user-id="{{ current_user.id }}"
+     data-user-name="{{ current_user.username }}"
+     data-locked="{{ 'false' if pending_amendment else ('true' if contract.status == 'SIGNED' else 'false') }}"
+     style="display:none;"></div>
+
+<!-- BOUTON FLOTTANT CHAT -->
+<button id="chat-fab" class="chat-fab" type="button" aria-label="Ouvrir le chat">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+  <span id="chat-fab-badge" class="fab-badge" style="display:none;">0</span>
+</button>
+
+<!-- PANNEAU DE CHAT -->
+<aside id="chat-panel" class="chat-panel">
+  <div class="chat-header">
+    <div>
+      <h3>💬 Discussion</h3>
+      <div class="chat-status">
+        {% if pending_amendment %}
+          Discussion rouverte
+        {% elif contract.status == 'SIGNED' %}
+          Archivé · lecture seule
+        {% else %}
+          En direct
+        {% endif %}
+      </div>
+    </div>
+    <button id="chat-close" class="chat-close" type="button" aria-label="Fermer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  {% if contract.status == 'SIGNED' and not pending_amendment %}
+  <div class="chat-locked-banner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <rect x="3" y="11" width="18" height="11" rx="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+    <span>Contrat signé — discussion archivée</span>
+  </div>
+
+  <div id="chat-amendment-section" style="padding: 12px 16px;
+       background: #fef3c7; border-top: 1px solid #fde68a;">
+    <p style="margin: 0 0 8px; font-size: 12px; color: #92400e;">
+      💡 Vous souhaitez modifier ce contrat signé ?
+    </p>
+    <button id="btn-request-amendment" type="button"
+            style="width: 100%; padding: 10px; background: #f59e0b;
+                   color: #ffffff; border: none; border-radius: 8px;
+                   cursor: pointer; font-weight: 600; font-size: 13px;
+                   display: flex; align-items: center; justify-content: center;
+                   gap: 6px;">
+      📝 Demander une modification
+    </button>
+  </div>
+  {% endif %}
+
+  {% if contract.status == 'SIGNED' and pending_amendment %}
+  <div class="chat-locked-banner" style="background: #dcfce7;
+       border-left-color: #22c55e; color: #166534;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+    </svg>
+    <span>Discussion rouverte — négociation en cours</span>
+  </div>
+  {% endif %}
+
+  <div id="chat-messages" class="chat-messages">
+    <div class="chat-empty">Chargement…</div>
+  </div>
+
+  <div id="chat-typing" class="chat-typing"></div>
+
+  <div id="chat-ia-result" style="display: none; padding: 12px 16px;
+       background: #eef2ff; border-top: 1px solid #c7d2fe;"></div>
+
+  {% if current_user.role in ('MANAGER', 'ADMIN') %}
+  <div id="chat-finalize-section" style="padding: 8px 16px;
+       border-top: 1px solid #f1f5f9;">
+    <button id="btn-finalize" type="button"
+            style="width: 100%; padding: 12px; background: #0d9488; color: #fff;
+                   border: none; border-radius: 8px; cursor: pointer;
+                   font-weight: 600; font-size: 13px;
+                   display: flex; align-items: center; justify-content: center;
+                   gap: 6px;">
+      {% if contract.status == 'SIGNED' %}
+        ✅ Finaliser (créer avenant)
+      {% else %}
+        ✅ Appliquer les modifications
+      {% endif %}
+    </button>
+  </div>
+  {% endif %}
+
+  <form id="chat-input"
+        class="chat-input{% if contract.status == 'SIGNED' and not pending_amendment %} locked{% endif %}">
+
+    <!-- Icône 📎 Joindre un PDF -->
+    <button type="button" id="chat-attach-btn" title="Joindre un PDF"
+            {% if contract.status == 'SIGNED' and not pending_amendment %}disabled{% endif %}
+            style="background:none;border:none;cursor:pointer;padding:6px;
+                   color:#64748b;display:flex;align-items:center;
+                   flex-shrink:0;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+      </svg>
+    </button>
+    <input type="file" id="chat-pdf-input" accept="application/pdf"
+           style="display:none;">
+
+    <textarea id="chat-textarea"
+              placeholder="{% if contract.status == 'SIGNED' and not pending_amendment %}Chat verrouillé{% else %}Écrire un message… (Entrée pour envoyer){% endif %}"
+              rows="1"
+              {% if contract.status == 'SIGNED' and not pending_amendment %}disabled{% endif %}></textarea>
+
+    <button id="chat-send" type="submit"
+            {% if contract.status == 'SIGNED' and not pending_amendment %}disabled{% endif %}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+      </svg>
+    </button>
+  </form>
+</aside>
+
 <!-- ====================== SCRIPTS ====================== -->
 <script nonce="{{ csp_nonce() }}">
   // Permissions toggle
@@ -439,9 +619,7 @@
     });
   });
 
-  // ---------------------------------------------------------------------
-  //  PREVIEW PDF
-  // ---------------------------------------------------------------------
+  // PREVIEW PDF
   const previewModal = document.getElementById('preview-modal');
   const pdfFrame     = document.getElementById('pdf-frame');
   const btnPreview   = document.getElementById('btn-preview');
@@ -461,9 +639,7 @@
     if (e.target === previewModal) closePreview();
   });
 
-  // ---------------------------------------------------------------------
-  //  MODAL EDIT
-  // ---------------------------------------------------------------------
+  // MODAL EDIT
   const editModal = document.getElementById('edit-modal');
   const editForm  = document.getElementById('edit-form');
   const editErr   = document.getElementById('edit-global-error');

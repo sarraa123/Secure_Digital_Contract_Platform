@@ -75,12 +75,22 @@ class User(UserMixin, db.Model):
         nullable=True
     )
 
+    # --- Certificat X.509 auto-signé (PEM, NON secret) ---
+    x509_certificate_pem = db.Column(
+        db.Text,
+        nullable=True
+    )
+
     def __repr__(self):
         return f"<User {self.username}>"
 
     @property
     def has_signing_keys(self) -> bool:
         return bool(self.private_key_encrypted and self.public_key_pem)
+
+    @property
+    def has_x509_certificate(self) -> bool:
+        return bool(self.x509_certificate_pem)
 
     # --- Affichage (sidebar / topbar communes client & employé) ---
     @property

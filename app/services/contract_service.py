@@ -9,6 +9,7 @@ from typing import Optional
 from app.models.signature import Signature
 from app.models.user import User
 from app.extensions import db
+from app.services import notification_service
 from app.models import Contract, ContractPermission
 from app.services.encryption_service import (
     encrypt_contract_data, decrypt_contract_data,
@@ -130,10 +131,6 @@ def _save_metadata(model: Contract, metadata: dict) -> None:
 
 
 def _is_locked(metadata: dict, model: Contract) -> bool:
-    """
-    Un contrat SIGNED est verrouillé.
-    On détecte SIGNED par la présence d'une signature (pas par le blob).
-    """
     if Signature.query.filter_by(contract_id=model.id).first():
         return True
     return metadata.get("status") == "SIGNED"
@@ -152,11 +149,6 @@ def _block_if_locked(metadata: dict, model: Contract,
 
 
 def _resolve_status(model: Contract, metadata: dict) -> str:
-    """
-    Déduit le statut réel du contrat :
-    - Si une signature existe en base → SIGNED
-    - Sinon → ce que dit le blob métadonnées
-    """
     if Signature.query.filter_by(contract_id=model.id).first():
         return "SIGNED"
     return metadata.get("status", "DRAFT")
@@ -189,7 +181,17 @@ def create_contract(form, file, owner: User) -> ContractView:
     db.session.commit()
 
     log_event("CONTRACT_CREATED", user_id=owner.id, details=f"id={model.id}")
-    return load_contract(model.id, owner)
+
+    # Charger la vue et notifier
+    view = load_contract(model.id, owner)
+    if view:
+        try:
+            notification_service.notify_contract_created(view, owner)
+        except Exception:
+            from flask import current_app
+            current_app.logger.exception("Échec notification creation")
+
+    return view
 
 
 # =========================================================================
@@ -219,7 +221,6 @@ def load_contract(contract_id: int, user: User) -> Optional[ContractView]:
                   status="403", details=f"contract_id={contract_id}")
         return None
 
-    # Statut réel (déduit de la présence d'une signature)
     real_status = _resolve_status(model, metadata)
 
     client = (User.query.get(metadata.get("client_id"))
@@ -325,7 +326,6 @@ ALLOWED_PERMISSIONS = {"read", "download", "sign", "share"}
 
 
 def _can_manage(metadata: dict, model: Contract, user: User) -> bool:
-    """Owner / admin / permission 'share' → peut partager, éditer, révoquer."""
     if user.role == "ADMIN":
         return True
     if metadata.get("owner_id") == user.id:
@@ -335,10 +335,8 @@ def _can_manage(metadata: dict, model: Contract, user: User) -> bool:
     ).first() is not None
 
 
-def share_contract(contract_id: int,
-                   actor: User,
-                   recipient_email: str,
-                   permissions: list) -> dict:
+def share_contract(contract_id: int, actor: User,
+                   recipient_email: str, permissions: list) -> dict:
     model = db.session.get(Contract, contract_id)
     if not model:
         return {"ok": False, "error": "Contrat introuvable.", "log_detail": None}
@@ -403,6 +401,16 @@ def share_contract(contract_id: int,
               details=(f"contract_id={contract_id} "
                        f"to={email} perms={perms} "
                        f"actor={actor.email}"))
+
+    # --- Notification email au destinataire
+    try:
+        view = load_contract(contract_id, actor)
+        if view:
+            notification_service.notify_contract_shared(
+                view, actor, recipient, perms)
+    except Exception:
+        from flask import current_app
+        current_app.logger.exception("Échec notification partage")
 
     return {"ok": True, "error": None, "log_detail": None}
 
@@ -583,7 +591,6 @@ VALID_TRANSITIONS = {
 
 
 def _can_transition(metadata: dict, model: Contract, user: User, perm: str) -> bool:
-    """Owner / admin / permission explicite. `sign` implique `validate`."""
     if user.role == "ADMIN":
         return True
     if metadata.get("owner_id") == user.id:
@@ -601,17 +608,41 @@ def _can_transition(metadata: dict, model: Contract, user: User, perm: str) -> b
 
 
 def validate_contract(contract_id: int, actor: User) -> dict:
-    return _transition(contract_id, actor, target="VALIDATED", perm="validate")
+    result = _transition(contract_id, actor, target="VALIDATED", perm="validate")
 
+    if result.get("ok"):
+        try:
+            from app.services import notification_service
+            from app.models import User
+            view = load_contract(contract_id, actor)
+            if view:
+                owner = db.session.get(User, view.owner_id)
+                if owner and owner.id != actor.id:
+                    # In-app uniquement (cloche), PAS d'email
+                    notification_service.create_notification(
+                        user_id=owner.id,
+                        event_type="contract.validated",
+                        title=f"Contrat validé : {view.title}",
+                        message=f"Validé par {actor.username} ({actor.email})",
+                        link=f"/employee/contracts/{contract_id}",
+                        contract_id=contract_id,
+                        actor_id=actor.id,
+                    )
+        except Exception:
+            from flask import current_app
+            current_app.logger.exception("Échec notification validation")
 
-def sign_contract(contract_id: int, actor: User) -> dict:
+    return result
+
+def sign_contract(contract_id: int, actor: User,
+                  signature_image_b64: str = None) -> dict:
     """
     VALIDATED → SIGNED.
-    Calcule la signature RSA-PSS-SHA256 sur le contenu chiffré ACTUEL.
-    NE MODIFIE PAS le blob après signature (sinon la signature serait invalidée).
-    Le statut SIGNED est déduit de la présence d'une ligne dans `signatures`.
+    - Calcule la signature RSA-PSS-SHA256
+    - Si `signature_image_b64` fourni : valide + chiffre + stocke l'image PNG
+    - NE MODIFIE PAS le blob métadonnées après signature
     """
-    from app.services import signature_service
+    from app.services import signature_service, signature_image_service
 
     model = db.session.get(Contract, contract_id)
     if not model:
@@ -645,24 +676,44 @@ def sign_contract(contract_id: int, actor: User) -> dict:
         return {"ok": False,
                 "error": "Aucune clé de signature associée à votre compte."}
 
-    existing = Signature.query.filter_by(contract_id=contract_id).first()
-    if existing:
+    if Signature.query.filter_by(contract_id=contract_id).first():
         return {"ok": False, "error": "Ce contrat est déjà signé."}
 
-    # ⚠️ IMPORTANT : on signe le blob TEL QU'IL EST, sans le modifier ensuite.
+    # --- Validation de l'image AVANT écriture en base
+    png_bytes = None
+    if signature_image_b64:
+        png_bytes, err = signature_image_service.decode_png_from_client(
+            signature_image_b64)
+        if png_bytes is None:
+            log_event("INVALID_SIGNATURE_IMAGE", user_id=actor.id, status="400",
+                      details=f"contract_id={contract_id} reason={err}")
+            return {"ok": False, "error": err}
+
+        ok, err = signature_image_service.validate_png(png_bytes)
+        if not ok:
+            log_event("INVALID_SIGNATURE_IMAGE", user_id=actor.id, status="400",
+                      details=f"contract_id={contract_id} reason={err}")
+            return {"ok": False, "error": err}
+
     try:
-        sig = signature_service.create_signature(model, actor)
+        sig = signature_service.create_signature(model, actor, png_bytes)
     except Exception as e:
         log_event("SIGNATURE_FAILED", user_id=actor.id, status="500",
                   details=f"exception={type(e).__name__}")
         return {"ok": False, "error": "Échec du calcul de la signature."}
 
-    # ⚠️ ON NE MODIFIE PAS LE BLOB après signature.
-    # Le statut SIGNED sera déduit par _resolve_status() lors des lectures.
+    # --- Notifications email (propriétaire + signataire avec certificat)
+    try:
+        view = load_contract(contract_id, actor)
+        if view:
+            notification_service.notify_contract_signed(view, actor, sig)
+    except Exception:
+        from flask import current_app
+        current_app.logger.exception("Échec notification signature")
 
     log_event("CONTRACT_SIGNED", user_id=actor.id, status="OK",
               details=(f"contract_id={contract_id} actor={actor.email} "
-                       f"algo={sig.algorithm} doc_hash={sig.document_hash[:16]}…"))
+                       f"algo={sig.algorithm} with_image={png_bytes is not None}"))
 
     return {"ok": True, "new_status": "SIGNED",
             "signature_id": sig.id,
@@ -670,19 +721,17 @@ def sign_contract(contract_id: int, actor: User) -> dict:
 
 
 def verify_signature_of_contract(contract_id: int) -> dict:
-    """Vérifie la signature RSA-PSS stockée dans la table `signatures`."""
     from app.services import signature_service
 
     model = db.session.get(Contract, contract_id)
     if not model:
-        return {"ok": False, "reason": "not_found", "signer": None}
+        return {"ok": False, "reason": "not_found", "signer": None,
+                "signature": None}
 
-    metadata = decrypt_contract_data(model.encrypted_metadata)
-
-    # Le statut SIGNED est détecté par la présence d'une signature
     sig_exists = Signature.query.filter_by(contract_id=contract_id).first()
     if not sig_exists:
-        return {"ok": False, "reason": "not_signed", "signer": None}
+        return {"ok": False, "reason": "not_signed", "signer": None,
+                "signature": None}
 
     result = signature_service.verify_signature_for_contract(model)
 
@@ -693,9 +742,9 @@ def verify_signature_of_contract(contract_id: int) -> dict:
                        f"signer={result['signer'].email if result['signer'] else '—'}"))
 
     return {
-        "ok":     result["ok"],
-        "reason": result["reason"],
-        "signer": result["signer"],
+        "ok":        result["ok"],
+        "reason":    result["reason"],
+        "signer":    result["signer"],
         "signature": result["signature"],
     }
 

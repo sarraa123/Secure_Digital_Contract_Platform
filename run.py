@@ -1,45 +1,46 @@
-from flask import request
+"""
+Point d'entrée Veridoc avec SocketIO.
 
-from app import create_app, db
-from app.models.user import User
+Deux modes :
+  1. Sans HTTPS (dev rapide) :
+        python run.py
+  2. Avec HTTPS (recommandé) :
+        python run.py --https
+"""
+import os
+import sys
+
+from app import create_app
+from app.extensions import socketio
 
 app = create_app()
-# ---------------------------------------------------------------------------
-# Contexte global : layout + utilisateur courant (mock)
-# ---------------------------------------------------------------------------
-@app.context_processor
-def inject_layout():
-    path = request.path
 
-    if path.startswith("/client"):
-        layout = "client"
-        u = User.query.filter_by(email="alice@partner.com").first()
-    else:
-        layout = "employee"
-        u = User.query.filter_by(email="manager@secure.local").first()
-
-    if not u:
-        u = User.query.first()
-
-    if not u:
-        return {
-            "layout": layout,
-            "user": {"name": "Anonyme", "role": "—",
-                     "email": "—", "initials": "??"},
-        }
-
-    initials = "".join(p[0] for p in u.username.split())[:2].upper()
-    return {
-        "layout": layout,
-        "user": {
-            "name":     u.username,
-            "role":     u.role,
-            "email":    u.email,
-            "initials": initials,
-        },
-    }
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()  # Crée les tables si elles n'existent pas
-    app.run(debug=True)
+    use_https = "--https" in sys.argv
+
+    ssl_context = None
+    if use_https:
+        cert = "dev-cert.pem"
+        key  = "dev-key.pem"
+        if not (os.path.exists(cert) and os.path.exists(key)):
+            print(f"❌ Certificats introuvables : {cert}, {key}")
+            print("   Génère-les avec :")
+            print("   > mkcert -key-file dev-key.pem -cert-file dev-cert.pem "
+                  "localhost 127.0.0.1 ::1")
+            sys.exit(1)
+        ssl_context = (cert, key)
+        print("🔒 HTTPS activé (https://127.0.0.1:5000)")
+    else:
+        print("⚠️  HTTP simple (http://127.0.0.1:5000)")
+        print("   Pour HTTPS : python run.py --https")
+
+    # SocketIO.run() remplace app.run()
+    socketio.run(
+        app,
+        host="127.0.0.1",
+        port=5000,
+        debug=True,
+        ssl_context=ssl_context,
+        allow_unsafe_werkzeug=True,   # requis pour dev avec SocketIO
+    )
