@@ -63,5 +63,15 @@ class User(UserMixin, db.Model):
         nullable=True
     )
 
+    mfa_enabled = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    mfa_secret = db.Column(
+        db.String(32),
+        nullable=True
+    )
     def __repr__(self):
         return f"<User {self.username}>"
