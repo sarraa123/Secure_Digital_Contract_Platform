@@ -84,7 +84,15 @@
 
                 <div class="form-group">
                     {{ form.username.label(class="form-label") }}
-                    {{ form.username(class="form-input", placeholder="Your full name") }}
+                    {{ form.username(
+                        class="form-input", 
+                        placeholder="Your full name", 
+                        minlength="3", 
+                        maxlength="80", 
+                        pattern="[A-Za-z0-9_-]+", 
+                        autocomplete="username", 
+                        required=true
+                    ) }}
 
                     {% for error in form.username.errors %}
                         <p class="field-error">{{ error }}</p>
@@ -93,7 +101,13 @@
 
                 <div class="form-group">
                     {{ form.email.label(class="form-label") }}
-                    {{ form.email(class="form-input", placeholder="you@company.com") }}
+                    {{ form.email(
+                        class="form-input", 
+                        placeholder="you@company.com", 
+                        maxlength="255", 
+                        autocomplete="email", 
+                        required=true
+                    ) }}
 
                     {% for error in form.email.errors %}
                         <p class="field-error">{{ error }}</p>
@@ -103,7 +117,14 @@
                 <div class="form-group">
                     {{ form.password.label(class="form-label") }}
                     <div class="password-field">
-                        {{ form.password(class="form-input", placeholder="At least 8 characters") }}
+                        {{ form.password(
+                            class="form-input",
+                            placeholder="At least 12 characters",
+                            minlength="12",
+                            maxlength="128",
+                            autocomplete="new-password",
+                            required=true
+                        ) }}
                         <button type="button" class="password-toggle" data-toggle-password aria-label="Afficher le mot de passe">
                             <svg class="icon-eye" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
@@ -125,7 +146,14 @@
                 <div class="form-group">
                     {{ form.confirm_password.label(class="form-label") }}
                     <div class="password-field">
-                        {{ form.confirm_password(class="form-input", placeholder="Repeat your password") }}
+                        {{ form.confirm_password(
+                            class="form-input",
+                            placeholder="Repeat your password",
+                            minlength="12",
+                            maxlength="128",
+                            autocomplete="new-password",
+                            required=true
+                        ) }}
                         <button type="button" class="password-toggle" data-toggle-password aria-label="Afficher le mot de passe">
                             <svg class="icon-eye" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
@@ -158,6 +186,6 @@
 
 </div>
 
-<script  nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 </body>
 </html>

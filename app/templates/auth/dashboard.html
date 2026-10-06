@@ -61,7 +61,12 @@
                         name="csrf_token"
                         value="{{ csrf_token() }}"
                     >
-
+<a
+    href="{{ url_for('auth.mfa_setup') }}"
+    class="btn btn-warning"
+>
+    Activer MFA
+</a>
                     <button
                         type="submit"
                         class="btn-outline"

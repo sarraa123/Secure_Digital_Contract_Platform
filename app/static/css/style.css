@@ -704,6 +704,113 @@ button, input {
 }
 
 /* =========================================================
+   MFA PAGES (setup / verify / recovery codes / login challenge)
+   ========================================================= */
+
+.mfa-steps {
+    margin: var(--space-5) 0 0;
+    padding-left: 20px;
+    color: var(--ink-500);
+    font-size: 14.5px;
+    line-height: 1.8;
+}
+
+.qr-frame {
+    margin: var(--space-5) 0;
+    padding: var(--space-5);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-frame img {
+    max-width: 220px;
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.secret-box {
+    margin-top: var(--space-3);
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    word-break: break-all;
+}
+
+.secret-box code {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ink-900);
+}
+
+.form-input-code {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.callout {
+    margin-top: var(--space-5);
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    line-height: 1.6;
+    border: 1px solid transparent;
+}
+
+.callout strong { display: block; margin-bottom: 4px; }
+
+.callout-warning {
+    background: var(--amber-soft);
+    color: #8a5a16;
+    border-color: #f2e0b6;
+}
+
+.recovery-list {
+    list-style: none;
+    margin: var(--space-4) 0 var(--space-6);
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+}
+
+.recovery-item {
+    padding: 11px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+.recovery-item code {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--ink-900);
+}
+
+/* Lets .btn-primary double as an <a> link-button */
+a.btn-primary,
+.btn-link {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    margin-top: var(--space-6);
+}
+a.btn-primary:hover { text-decoration: none; }
+
+/* =========================================================
    RESPONSIVE
    ========================================================= */
 
@@ -745,4 +852,6 @@ button, input {
 
     .dashboard-actions { justify-content: stretch; }
     .dashboard-actions form { width: 100%; }
+
+    .recovery-list { grid-template-columns: 1fr; }
 }

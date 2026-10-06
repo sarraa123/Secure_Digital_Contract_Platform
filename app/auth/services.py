@@ -2,6 +2,7 @@ from argon2 import PasswordHasher
 
 from app import db
 from app.models import User
+from app.services.crypto_service import generate_keypair
 
 
 password_hasher = PasswordHasher()
@@ -33,12 +34,19 @@ def create_pending_user(
         password_hash=password_hash,
         role="CLIENT",
         status="PENDING",
+        mfa_enabled=True,
     )
+
+    # ⭐ Génération des clés RSA dès la création
+    private_key, public_key = generate_keypair()
+    user.private_key_encrypted = private_key
+    user.public_key_pem = public_key
 
     db.session.add(user)
     db.session.commit()
 
     return user
+
 
 def authenticate_user(email: str, password: str) -> User | None:
     user = User.query.filter_by(email=email).first()

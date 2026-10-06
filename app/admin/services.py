@@ -11,13 +11,13 @@ def approve_user(user: User) -> User:
 
     user.status = "ACTIVE"
 
+    # Génération des clés RSA si absentes
     if not user.has_signing_keys:
         private_key, public_key = generate_keypair()
         user.private_key_encrypted = private_key
         user.public_key_pem = public_key
 
     db.session.commit()
-
     return user
 
 
@@ -27,7 +27,6 @@ def reject_user(user: User) -> User:
 
     user.status = "REJECTED"
     db.session.commit()
-
     return user
 
 
@@ -53,7 +52,13 @@ def create_manager(
         role="MANAGER",
         status="ACTIVE",
         must_change_password=True,
+        mfa_enabled=True,
     )
+
+    # ⭐ Génération des clés RSA dès la création
+    private_key, public_key = generate_keypair()
+    manager.private_key_encrypted = private_key
+    manager.public_key_pem = public_key
 
     db.session.add(manager)
     db.session.commit()

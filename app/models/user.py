@@ -65,11 +65,15 @@ class User(UserMixin, db.Model):
         nullable=True
     )
 
-    # --- Signature numérique RSA (CDC CRYP-08) ---
+    # ==========================================================
+    # SIGNATURE NUMÉRIQUE RSA (CDC CRYP-08)  ← ton travail
+    # ==========================================================
+
     private_key_encrypted = db.Column(
         db.LargeBinary,
         nullable=True
     )
+
     public_key_pem = db.Column(
         db.Text,
         nullable=True
@@ -81,8 +85,31 @@ class User(UserMixin, db.Model):
         nullable=True
     )
 
+    # ==========================================================
+    # MFA (TOTP)  ← travail de Sarra
+    # ==========================================================
+
+    mfa_enabled = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    mfa_secret = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    # ==========================================================
+    # REPR
+    # ==========================================================
+
     def __repr__(self):
         return f"<User {self.username}>"
+
+    # ==========================================================
+    # PROPRIÉTÉS
+    # ==========================================================
 
     @property
     def has_signing_keys(self) -> bool:
