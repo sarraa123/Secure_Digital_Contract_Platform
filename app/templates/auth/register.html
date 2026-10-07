@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -8,6 +7,7 @@
     <title>Créer un compte</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/password-toggle.css') }}">
 </head>
 
 <body>
@@ -29,16 +29,16 @@
         <div class="auth-brand-spacer"></div>
 
         <div class="auth-brand-body">
-            <span class="eyebrow">Private contract operations</span>
+            <span class="eyebrow">Opérations contractuelles privées</span>
 
             <h1 class="auth-headline">
-                Your agreements,
-                <span class="accent">clear and protected.</span>
+                Vos accords,
+                <span class="accent">clairs et protégés.</span>
             </h1>
 
             <p class="auth-brand-copy">
-                Create a secure client workspace to follow the contracts
-                shared with you and sign with confidence.
+                Créez un espace client sécurisé pour suivre les contrats
+                partagés avec vous et signer en toute confiance.
             </p>
         </div>
 
@@ -48,14 +48,14 @@
                     <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.6"/>
                     <path d="M9.5 12l1.8 1.8L14.5 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Audit-ready by default
+                Prêt pour l'audit par défaut
             </li>
             <li>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.6"/>
                     <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/>
                 </svg>
-                Encrypted workspace
+                Espace de travail chiffré
             </li>
         </ul>
 
@@ -64,9 +64,9 @@
     <main class="auth-panel">
         <div class="auth-panel-inner">
 
-            <span class="eyebrow">Secure workspace</span>
-            <h1 class="auth-title">Create your account.</h1>
-            <p class="auth-subtitle">Join as a client to access contracts shared with you.</p>
+            <span class="eyebrow">Espace de travail sécurisé</span>
+            <h1 class="auth-title">Créez votre compte.</h1>
+            <p class="auth-subtitle">Inscrivez-vous en tant que client pour accéder aux contrats partagés avec vous.</p>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -84,7 +84,15 @@
 
                 <div class="form-group">
                     {{ form.username.label(class="form-label") }}
-                    {{ form.username(class="form-input", placeholder="Your full name") }}
+                    {{ form.username(
+                        class="form-input", 
+                        placeholder="Votre nom complet", 
+                        minlength="3", 
+                        maxlength="80", 
+                        pattern="[A-Za-z0-9_-]+", 
+                        autocomplete="username", 
+                        required=true
+                    ) }}
 
                     {% for error in form.username.errors %}
                         <p class="field-error">{{ error }}</p>
@@ -93,7 +101,13 @@
 
                 <div class="form-group">
                     {{ form.email.label(class="form-label") }}
-                    {{ form.email(class="form-input", placeholder="you@company.com") }}
+                    {{ form.email(
+                        class="form-input", 
+                        placeholder="vous@entreprise.com", 
+                        maxlength="255", 
+                        autocomplete="email", 
+                        required=true
+                    ) }}
 
                     {% for error in form.email.errors %}
                         <p class="field-error">{{ error }}</p>
@@ -102,7 +116,27 @@
 
                 <div class="form-group">
                     {{ form.password.label(class="form-label") }}
-                    {{ form.password(class="form-input", placeholder="At least 8 characters") }}
+                    <div class="password-field">
+                        {{ form.password(
+                            class="form-input",
+                            placeholder="Au moins 12 caractères",
+                            minlength="12",
+                            maxlength="128",
+                            autocomplete="new-password",
+                            required=true
+                        ) }}
+                        <button type="button" class="password-toggle" data-toggle-password aria-label="Afficher le mot de passe">
+                            <svg class="icon-eye" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/>
+                            </svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                <path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.2 4.2M6.8 6.8A15.7 15.7 0 0 0 2 12s3.5 7 10 7a10.4 10.4 0 0 0 4.2-.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
 
                     {% for error in form.password.errors %}
                         <p class="field-error">{{ error }}</p>
@@ -111,7 +145,27 @@
 
                 <div class="form-group">
                     {{ form.confirm_password.label(class="form-label") }}
-                    {{ form.confirm_password(class="form-input", placeholder="Repeat your password") }}
+                    <div class="password-field">
+                        {{ form.confirm_password(
+                            class="form-input",
+                            placeholder="Répétez votre mot de passe",
+                            minlength="12",
+                            maxlength="128",
+                            autocomplete="new-password",
+                            required=true
+                        ) }}
+                        <button type="button" class="password-toggle" data-toggle-password aria-label="Afficher le mot de passe">
+                            <svg class="icon-eye" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/>
+                            </svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                <path d="M10.6 5.2A10.6 10.6 0 0 1 12 5c6.5 0 10 7 10 7a15.6 15.6 0 0 1-3.2 4.2M6.8 6.8A15.7 15.7 0 0 0 2 12s3.5 7 10 7a10.4 10.4 0 0 0 4.2-.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
 
                     {% for error in form.confirm_password.errors %}
                         <p class="field-error">{{ error }}</p>
@@ -123,8 +177,8 @@
             </form>
 
             <p class="auth-fineprint">
-                Public registration creates a client account. Employee and
-                admin access is managed by your organization.
+                L'inscription publique crée un compte client. L'accès employé et
+                administrateur est géré par votre organisation.
             </p>
 
         </div>
@@ -132,5 +186,6 @@
 
 </div>
 
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 </body>
 </html>

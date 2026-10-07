@@ -8,7 +8,10 @@ from app import db
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
     username = db.Column(
         db.String(80),
@@ -39,6 +42,12 @@ class User(UserMixin, db.Model):
         default="PENDING"
     )
 
+    must_change_password = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
@@ -56,5 +65,70 @@ class User(UserMixin, db.Model):
         nullable=True
     )
 
+    # ==========================================================
+    # SIGNATURE NUMÉRIQUE RSA (CDC CRYP-08)  ← ton travail
+    # ==========================================================
+
+    private_key_encrypted = db.Column(
+        db.LargeBinary,
+        nullable=True
+    )
+
+    public_key_pem = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    # --- Certificat X.509 auto-signé (PEM, NON secret) ---
+    x509_certificate_pem = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    # ==========================================================
+    # MFA (TOTP)  ← travail de Sarra
+    # ==========================================================
+
+    mfa_enabled = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    mfa_secret = db.Column(
+        db.String(32),
+        nullable=True
+    )
+
+    # ==========================================================
+    # REPR
+    # ==========================================================
+
     def __repr__(self):
         return f"<User {self.username}>"
+
+    # ==========================================================
+    # PROPRIÉTÉS
+    # ==========================================================
+
+    @property
+    def has_signing_keys(self) -> bool:
+        return bool(self.private_key_encrypted and self.public_key_pem)
+
+    @property
+    def has_x509_certificate(self) -> bool:
+        return bool(self.x509_certificate_pem)
+
+    # --- Affichage (sidebar / topbar communes client & employé) ---
+    @property
+    def name(self) -> str:
+        return self.username
+
+    @property
+    def initials(self) -> str:
+        parts = self.username.split()
+        if len(parts) >= 2:
+            return (parts[0][0] + parts[-1][0]).upper()
+        if self.username:
+            return self.username[:2].upper()
+        return "?"

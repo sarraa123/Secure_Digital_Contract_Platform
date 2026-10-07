@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+<div class="app-shell">
+
+    <nav class="app-nav">
+        <div class="brand-mark">
+            <span class="brand-mark-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Z" stroke="#0b1526" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M9 12.5l2 2 4-4.5" stroke="#0b1526" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </span>
+            <span class="brand-mark-name">Veridoc</span>
+        </div>
+    </nav>
+
+    <main class="app-main app-main-narrow">
+
+        <div class="card app-form-card">
+
+            <span class="eyebrow">Sécurité du compte</span>
+            <h1 class="app-form-title">Activer l'authentification MFA</h1>
+
+            <ol class="mfa-steps">
+                <li>Ouvrez Google Authenticator.</li>
+                <li>Scannez le QR code ci-dessous.</li>
+            </ol>
+
+            <div class="qr-frame">
+                <img
+                    src="{{ qr_code }}"
+                    alt="QR Code MFA"
+                >
+            </div>
+
+            <p class="app-form-notice">
+                Si le scan est impossible, utilisez cette clé manuellement :
+            </p>
+
+            <div class="secret-box">
+                <code>{{ secret }}</code>
+            </div>
+
+            <a
+                href="{{ url_for('auth.mfa_setup_verify') }}"
+                class="btn-primary btn-link"
+            >
+                J'ai configuré Google Authenticator
+            </a>
+
+        </div>
+
+    </main>
+
+</div>
+
+{% endblock %}
