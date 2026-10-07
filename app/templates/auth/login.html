@@ -21,16 +21,16 @@
         <div class="auth-brand-spacer"></div>
 
         <div class="auth-brand-body">
-            <span class="eyebrow">Private contract operations</span>
+            <span class="eyebrow">Opérations contractuelles privées</span>
 
             <h1 class="auth-headline">
-                Move agreements
-                <span class="accent">forward with proof.</span>
+                Faites avancer vos accords
+                <span class="accent">avec preuve à l'appui.</span>
             </h1>
 
             <p class="auth-brand-copy">
-                A considered workspace for the contracts that matter.
-                Review, validate, and sign with a clear record at every step.
+                Un espace de travail réfléchi pour les contrats qui comptent.
+                Consultez, validez et signez avec une trace claire à chaque étape.
             </p>
         </div>
 
@@ -40,14 +40,14 @@
                     <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.6"/>
                     <path d="M9.5 12l1.8 1.8L14.5 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Audit-ready by default
+                Prêt pour l'audit par défaut
             </li>
             <li>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.6"/>
                     <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/>
                 </svg>
-                Encrypted workspace
+                Espace de travail chiffré
             </li>
         </ul>
 
@@ -56,9 +56,9 @@
     <main class="auth-panel">
         <div class="auth-panel-inner">
 
-            <span class="eyebrow">Secure workspace</span>
-            <h2 class="auth-title">Welcome back.</h2>
-            <p class="auth-subtitle">Sign in to continue to your contract workspace.</p>
+            <span class="eyebrow">Espace de travail sécurisé</span>
+            <h2 class="auth-title">Bon retour.</h2>
+            <p class="auth-subtitle">Connectez-vous pour accéder à votre espace de contrats.</p>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -80,7 +80,7 @@
                     {{ form.email(
                         class="form-input" ~ (" is-invalid" if form.email.errors else ""),
                         autocomplete="email",
-                        placeholder="you@company.com"
+                        placeholder="vous@entreprise.com"
                     ) }}
 
                     {% for error in form.email.errors %}
@@ -95,7 +95,7 @@
                         {{ form.password(
                             class="form-input" ~ (" is-invalid" if form.password.errors else ""),
                             autocomplete="current-password",
-                            placeholder="Enter your password"
+                            placeholder="Entrez votre mot de passe"
                         ) }}
                         <button type="button" class="password-toggle" data-toggle-password aria-label="Afficher le mot de passe">
                             <svg class="icon-eye" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -120,8 +120,8 @@
             </form>
 
             <p class="auth-fineprint">
-                Access is managed by your organization. Contact your workspace
-                administrator if you need help.
+                L'accès est géré par votre organisation. Contactez votre administrateur
+                d'espace de travail si vous avez besoin d'aide.
             </p>
 
             <div class="auth-footnote">

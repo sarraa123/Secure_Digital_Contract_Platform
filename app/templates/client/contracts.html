@@ -1,12 +1,12 @@
 {% extends "base_users.html" %}
-{% block title %}My contracts · Veridoc{% endblock %}
+{% block title %}Mes contrats · Veridoc{% endblock %}
 {% block content %}
 
 <div class="header-row animate-rise">
   <div>
-    <p class="eyebrow">Contract workspace</p>
-    <h1 class="page-title">Contracts</h1>
-    <p class="subtitle">One clear source of truth for every agreement.</p>
+    <p class="eyebrow">Espace de travail contractuel</p>
+    <h1 class="page-title">Contrats</h1>
+    <p class="subtitle">Une source unique et claire pour chaque accord.</p>
   </div>
 </div>
 
@@ -16,18 +16,18 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
       </svg>
-      <input class="input" type="search" id="client-search" placeholder="Search contracts by title…">
+      <input class="input" type="search" id="client-search" placeholder="Rechercher des contrats par titre…">
     </div>
     <div class="filter-box">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
       </svg>
       <select id="client-status-filter">
-        <option value="ALL">All statuses</option>
-        <option value="DRAFT">Draft</option>
-        <option value="SHARED">Shared</option>
-        <option value="VALIDATED">Validated</option>
-        <option value="SIGNED">Signed</option>
+        <option value="ALL">Tous les statuts</option>
+        <option value="DRAFT">Brouillon</option>
+        <option value="SHARED">Partagé</option>
+        <option value="VALIDATED">Validé</option>
+        <option value="SIGNED">Signé</option>
       </select>
     </div>
   </div>
@@ -35,13 +35,13 @@
   <div style="padding:0 20px 20px;">
   {% if contracts|length == 0 %}
     <div class="empty-state">
-      <p class="empty-title">No contracts shared with you yet.</p>
+      <p class="empty-title">Aucun contrat ne vous a encore été partagé.</p>
     </div>
   {% else %}
     <table class="contracts-table" id="client-contracts-table">
       <thead>
         <tr>
-          <th>Contract</th><th>Owner</th><th>Status</th><th>Integrity</th><th>Updated</th><th></th>
+          <th>Contrat</th><th>Propriétaire</th><th>Statut</th><th>Intégrité</th><th>Mis à jour</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -61,10 +61,22 @@
             </a>
           </td>
           <td class="owner">{{ c.owner_name }}</td>
-          <td><span class="pill {{ c.status|lower }}">{{ c.status }}</span></td>
-          <td><span class="pill {{ 'verified' if c.integrity=='VERIFIED' else 'unverified' }}">{{ c.integrity }}</span></td>
+          <td>
+            <span class="pill {{ c.status|lower }}">
+              {% if c.status == 'DRAFT' %}Brouillon
+              {% elif c.status == 'SHARED' %}Partagé
+              {% elif c.status == 'VALIDATED' %}Validé
+              {% elif c.status == 'SIGNED' %}Signé
+              {% else %}{{ c.status }}{% endif %}
+            </span>
+          </td>
+          <td>
+            <span class="pill {{ 'verified' if c.integrity=='VERIFIED' else 'unverified' }}">
+              {% if c.integrity == 'VERIFIED' %}Vérifiée{% else %}Non vérifiée{% endif %}
+            </span>
+          </td>
           <td class="owner">{{ c.updated_at_str }}</td>
-          <td><a class="open-link" href="{{ url_for('client.contract_detail', contract_id=c.id) }}">Open</a></td>
+          <td><a class="open-link" href="{{ url_for('client.contract_detail', contract_id=c.id) }}">Ouvrir</a></td>
         </tr>
         {% endfor %}
       </tbody>

@@ -38,6 +38,31 @@ admin_bp = Blueprint(
 
 
 # ==========================================================
+# ADMIN - DASHBOARD
+# ==========================================================
+
+@admin_bp.route("/dashboard")
+@admin_required
+def dashboard():
+
+    log_security_event(
+        ACCESS_GRANTED,
+        user_id=current_user.id,
+        status="SUCCESS",
+        details={
+            "resource": "admin_dashboard",
+            "action": "view_dashboard",
+            "role": current_user.role,
+        },
+    )
+
+    return render_template(
+        "admin/dashboard.html",
+        user=current_user,
+    )
+
+
+# ==========================================================
 # ADMIN - LIST USERS
 # ==========================================================
 
@@ -89,7 +114,11 @@ def approve(user_id):
     Security logging:
     - ACCOUNT_APPROVED SUCCESS
     - ACCOUNT_APPROVED FAILURE when target does not exist
-    - ACCOUNT_APPROVED FAILURE when service rejects the operation
+    - ACCOUNT_APPROVED FAILURE when service rejects operation
+
+    Email notification:
+    - SUCCESS popup if email is sent
+    - WARNING popup if account is approved but email fails
     """
 
     user = User.query.get(user_id)
@@ -128,6 +157,7 @@ def approve(user_id):
     # ------------------------------------------------------
 
     try:
+
         approve_user(user)
 
     except ValueError as error:
@@ -150,6 +180,16 @@ def approve(user_id):
         abort(400)
 
     # ------------------------------------------------------
+    # Get email result
+    # ------------------------------------------------------
+
+    email_sent = getattr(
+        user,
+        "_email_sent",
+        False,
+    )
+
+    # ------------------------------------------------------
     # Successful approval
     # ------------------------------------------------------
 
@@ -164,11 +204,36 @@ def approve(user_id):
             "target_email": target_email,
             "previous_status": previous_status,
             "new_status": "ACTIVE",
+            "email_sent": email_sent,
             "actor_role": current_user.role,
         },
     )
 
-    return redirect(url_for("admin.users"))
+    # ------------------------------------------------------
+    # Admin notification
+    # ------------------------------------------------------
+
+    if email_sent:
+
+        flash(
+            f"Compte de {target_username} approuvé avec succès. "
+            f"Un email de confirmation a été envoyé à "
+            f"{target_email}.",
+            "success",
+        )
+
+    else:
+
+        flash(
+            f"Compte de {target_username} approuvé avec succès, "
+            f"mais l'email n'a pas pu être envoyé à "
+            f"{target_email}.",
+            "warning",
+        )
+
+    return redirect(
+        url_for("admin.users")
+    )
 
 
 # ==========================================================
@@ -184,7 +249,11 @@ def reject(user_id):
     Security logging:
     - ACCOUNT_REJECTED SUCCESS
     - ACCOUNT_REJECTED FAILURE when target does not exist
-    - ACCOUNT_REJECTED FAILURE when service rejects the operation
+    - ACCOUNT_REJECTED FAILURE when service rejects operation
+
+    Email notification:
+    - SUCCESS popup if email is sent
+    - WARNING popup if account is rejected but email fails
     """
 
     user = User.query.get(user_id)
@@ -222,6 +291,7 @@ def reject(user_id):
     # ------------------------------------------------------
 
     try:
+
         reject_user(user)
 
     except ValueError as error:
@@ -244,6 +314,16 @@ def reject(user_id):
         abort(400)
 
     # ------------------------------------------------------
+    # Get email result
+    # ------------------------------------------------------
+
+    email_sent = getattr(
+        user,
+        "_email_sent",
+        False,
+    )
+
+    # ------------------------------------------------------
     # Successful rejection
     # ------------------------------------------------------
 
@@ -258,27 +338,59 @@ def reject(user_id):
             "target_email": target_email,
             "previous_status": previous_status,
             "new_status": "REJECTED",
+            "email_sent": email_sent,
             "actor_role": current_user.role,
         },
     )
 
-    return redirect(url_for("admin.users"))
+    # ------------------------------------------------------
+    # Admin notification
+    # ------------------------------------------------------
+
+    if email_sent:
+
+        flash(
+            f"Demande de {target_username} refusée avec succès. "
+            f"Un email de notification a été envoyé à "
+            f"{target_email}.",
+            "success",
+        )
+
+    else:
+
+        flash(
+            f"Demande de {target_username} refusée avec succès, "
+            f"mais l'email n'a pas pu être envoyé à "
+            f"{target_email}.",
+            "warning",
+        )
+
+    return redirect(
+        url_for("admin.users")
+    )
 
 
 # ==========================================================
 # ADMIN - CREATE MANAGER
 # ==========================================================
 
-@admin_bp.route("/managers/create", methods=["GET", "POST"])
+@admin_bp.route(
+    "/managers/create",
+    methods=["GET", "POST"]
+)
 @admin_required
 def create_manager_account():
     """
     Create a MANAGER account.
 
     Security logging:
-    - ACCESS_GRANTED for the manager creation page
+    - ACCESS_GRANTED for manager creation page
     - USER_CREATED SUCCESS/FAILURE
-    - PRIVILEGE_CHANGE SUCCESS when a MANAGER is created
+    - PRIVILEGE_CHANGE SUCCESS when MANAGER is created
+
+    Email notification:
+    - SUCCESS popup if email is sent
+    - WARNING popup if manager is created but email fails
     """
 
     # ------------------------------------------------------
@@ -305,6 +417,7 @@ def create_manager_account():
     if form.validate_on_submit():
 
         try:
+
             manager = create_manager(
                 username=form.username.data,
                 email=form.email.data,
@@ -331,7 +444,10 @@ def create_manager_account():
                 },
             )
 
-            flash(str(error), "danger")
+            flash(
+                str(error),
+                "danger",
+            )
 
             return render_template(
                 "admin/create_manager.html",
@@ -342,16 +458,32 @@ def create_manager_account():
         # Extract target information safely
         # ------------------------------------------------------
 
-        manager_id = getattr(manager, "id", None)
+        manager_id = getattr(
+            manager,
+            "id",
+            None,
+        )
+
         manager_username = getattr(
             manager,
             "username",
             form.username.data,
         )
+
         manager_email = getattr(
             manager,
             "email",
             form.email.data,
+        )
+
+        # ------------------------------------------------------
+        # Get email result
+        # ------------------------------------------------------
+
+        email_sent = getattr(
+            manager,
+            "_email_sent",
+            False,
         )
 
         # ------------------------------------------------------
@@ -368,6 +500,7 @@ def create_manager_account():
                 "target_username": manager_username,
                 "target_email": manager_email,
                 "target_role": "MANAGER",
+                "email_sent": email_sent,
                 "actor_role": current_user.role,
             },
         )
@@ -393,12 +526,33 @@ def create_manager_account():
             },
         )
 
-        flash(
-            "Le compte gestionnaire a été créé avec succès.",
-            "success",
-        )
+        # ------------------------------------------------------
+        # Admin notification
+        # ------------------------------------------------------
 
-        return redirect(url_for("admin.users"))
+        if email_sent:
+
+            flash(
+                f"Le compte gestionnaire « {manager_username} » "
+                f"a été créé avec succès. "
+                f"Un email contenant les informations de connexion "
+                f"a été envoyé à {manager_email}.",
+                "success",
+            )
+
+        else:
+
+            flash(
+                f"Le compte gestionnaire « {manager_username} » "
+                f"a été créé avec succès, "
+                f"mais l'email n'a pas pu être envoyé à "
+                f"{manager_email}.",
+                "warning",
+            )
+
+        return redirect(
+            url_for("admin.users")
+        )
 
     # ------------------------------------------------------
     # GET request or invalid form

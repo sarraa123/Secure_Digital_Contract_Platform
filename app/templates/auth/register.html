@@ -29,16 +29,16 @@
         <div class="auth-brand-spacer"></div>
 
         <div class="auth-brand-body">
-            <span class="eyebrow">Private contract operations</span>
+            <span class="eyebrow">Opérations contractuelles privées</span>
 
             <h1 class="auth-headline">
-                Your agreements,
-                <span class="accent">clear and protected.</span>
+                Vos accords,
+                <span class="accent">clairs et protégés.</span>
             </h1>
 
             <p class="auth-brand-copy">
-                Create a secure client workspace to follow the contracts
-                shared with you and sign with confidence.
+                Créez un espace client sécurisé pour suivre les contrats
+                partagés avec vous et signer en toute confiance.
             </p>
         </div>
 
@@ -48,14 +48,14 @@
                     <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" stroke="currentColor" stroke-width="1.6"/>
                     <path d="M9.5 12l1.8 1.8L14.5 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Audit-ready by default
+                Prêt pour l'audit par défaut
             </li>
             <li>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.6"/>
                     <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/>
                 </svg>
-                Encrypted workspace
+                Espace de travail chiffré
             </li>
         </ul>
 
@@ -64,9 +64,9 @@
     <main class="auth-panel">
         <div class="auth-panel-inner">
 
-            <span class="eyebrow">Secure workspace</span>
-            <h1 class="auth-title">Create your account.</h1>
-            <p class="auth-subtitle">Join as a client to access contracts shared with you.</p>
+            <span class="eyebrow">Espace de travail sécurisé</span>
+            <h1 class="auth-title">Créez votre compte.</h1>
+            <p class="auth-subtitle">Inscrivez-vous en tant que client pour accéder aux contrats partagés avec vous.</p>
 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -86,7 +86,7 @@
                     {{ form.username.label(class="form-label") }}
                     {{ form.username(
                         class="form-input", 
-                        placeholder="Your full name", 
+                        placeholder="Votre nom complet", 
                         minlength="3", 
                         maxlength="80", 
                         pattern="[A-Za-z0-9_-]+", 
@@ -103,7 +103,7 @@
                     {{ form.email.label(class="form-label") }}
                     {{ form.email(
                         class="form-input", 
-                        placeholder="you@company.com", 
+                        placeholder="vous@entreprise.com", 
                         maxlength="255", 
                         autocomplete="email", 
                         required=true
@@ -119,7 +119,7 @@
                     <div class="password-field">
                         {{ form.password(
                             class="form-input",
-                            placeholder="At least 12 characters",
+                            placeholder="Au moins 12 caractères",
                             minlength="12",
                             maxlength="128",
                             autocomplete="new-password",
@@ -148,7 +148,7 @@
                     <div class="password-field">
                         {{ form.confirm_password(
                             class="form-input",
-                            placeholder="Repeat your password",
+                            placeholder="Répétez votre mot de passe",
                             minlength="12",
                             maxlength="128",
                             autocomplete="new-password",
@@ -177,8 +177,8 @@
             </form>
 
             <p class="auth-fineprint">
-                Public registration creates a client account. Employee and
-                admin access is managed by your organization.
+                L'inscription publique crée un compte client. L'accès employé et
+                administrateur est géré par votre organisation.
             </p>
 
         </div>

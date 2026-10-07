@@ -17,7 +17,7 @@
     </div>
 
 {% if layout == "employee" %}
-  <p class="nav-label">Workspace</p>
+  <p class="nav-label">Espace de travail</p>
   <nav>
     <a class="nav-item {{ 'active' if active=='dashboard' else '' }}"
        href="{{ url_for('employee.dashboard') }}">
@@ -43,12 +43,12 @@
         <circle cx="12" cy="8" r="4"/>
         <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>
       </svg>
-      Profile
+      Profil
     </a>
   </nav>
 
 {% elif layout == "client" %}
-  <p class="nav-label">My space</p>
+  <p class="nav-label">Mon espace</p>
   <nav>
     <a class="nav-item {{ 'active' if active=='client-dashboard' else '' }}"
        href="{{ url_for('client.dashboard') }}">
@@ -58,7 +58,7 @@
         <rect x="14" y="12" width="7" height="9" rx="1"/>
         <rect x="3" y="16" width="7" height="5" rx="1"/>
       </svg>
-      My dashboard
+      Mon tableau de bord
     </a>
     <a class="nav-item {{ 'active' if active in ['client-contracts','client-contract-detail'] else '' }}"
        href="{{ url_for('client.contracts') }}">
@@ -66,7 +66,7 @@
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
         <path d="M14 2v6h6"/>
       </svg>
-      My contracts
+      Mes contrats
     </a>
     <a class="nav-item {{ 'active' if active=='client-profile' else '' }}"
        href="{{ url_for('client.profile') }}">
@@ -74,17 +74,17 @@
         <circle cx="12" cy="8" r="4"/>
         <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>
       </svg>
-      Profile
+      Profil
     </a>
   </nav>
 {% endif %}
   </aside>
 
-  <button class="sidebar-overlay" id="sidebar-overlay" aria-label="Close menu"></button>
+  <button class="sidebar-overlay" id="sidebar-overlay" aria-label="Fermer le menu"></button>
 
   <div class="content-col">
     <header class="topbar">
-      <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open navigation">
+      <button class="icon-btn menu-btn" id="menu-btn" aria-label="Ouvrir la navigation">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="4" y1="7" x2="20" y2="7"/>
           <line x1="4" y1="12" x2="20" y2="12"/>
@@ -93,7 +93,7 @@
       </button>
 
       <div class="breadcrumb">
-        <span>{{ 'Workspace' if layout == 'employee' else 'My space' }}</span>
+        <span>{{ 'Espace de travail' if layout == 'employee' else 'Mon espace' }}</span>
         <span class="sep">/</span>
         <span class="current">{{ breadcrumb }}</span>
       </div>
@@ -148,7 +148,7 @@
                   <polyline points="16 17 21 12 16 7"/>
                   <line x1="21" y1="12" x2="9" y2="12"/>
                 </svg>
-                Sign out
+                Se déconnecter
               </button>
             </form>
           </div>

@@ -1,15 +1,278 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Secure Digital Contract Platform{% endblock %}</title>
-</head>
-<body>
-    <div class="container">
-       
 
-        {% block content %}{% endblock %}
-    </div>
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}
+            Veridoc
+        {% endblock %}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+</head>
+
+<body>
+
+    <!-- =====================================================
+         VERIDOC GLOBAL FLASH / POPUP SYSTEM
+         ===================================================== -->
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% if messages %}
+
+            <div class="veridoc-toast-container">
+
+                {% for category, message in messages %}
+
+                    <div
+                        class="veridoc-toast veridoc-toast-{{ category }}"
+                        role="alert"
+                    >
+
+                        <!-- ICON -->
+                        <div class="veridoc-toast-icon">
+
+                            {% if category == "success" %}
+
+                                <svg
+                                    width="22"
+                                    height="22"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="9"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                    />
+
+                                    <path
+                                        d="M8 12l2.5 2.5L16 9"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    />
+                                </svg>
+
+                            {% elif category == "warning" %}
+
+                                <svg
+                                    width="22"
+                                    height="22"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        d="M12 3l9 17H3L12 3Z"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                        stroke-linejoin="round"
+                                    />
+
+                                    <path
+                                        d="M12 9v4"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                        stroke-linecap="round"
+                                    />
+
+                                    <circle
+                                        cx="12"
+                                        cy="16"
+                                        r="0.8"
+                                        fill="currentColor"
+                                    />
+                                </svg>
+
+                            {% elif category == "danger" or category == "error" %}
+
+                                <svg
+                                    width="22"
+                                    height="22"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="9"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                    />
+
+                                    <path
+                                        d="M8 8l8 8M16 8l-8 8"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                        stroke-linecap="round"
+                                    />
+                                </svg>
+
+                            {% else %}
+
+                                <svg
+                                    width="22"
+                                    height="22"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="9"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                    />
+
+                                    <path
+                                        d="M12 10v6"
+                                        stroke="currentColor"
+                                        stroke-width="1.8"
+                                        stroke-linecap="round"
+                                    />
+
+                                    <circle
+                                        cx="12"
+                                        cy="7"
+                                        r="0.8"
+                                        fill="currentColor"
+                                    />
+                                </svg>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- MESSAGE -->
+                        <div class="veridoc-toast-content">
+
+                            <strong>
+
+                                {% if category == "success" %}
+
+                                    Opération réussie
+
+                                {% elif category == "warning" %}
+
+                                    Attention
+
+                                {% elif category == "danger" or category == "error" %}
+
+                                    Opération impossible
+
+                                {% else %}
+
+                                    Information
+
+                                {% endif %}
+
+                            </strong>
+
+                            <p>
+                                {{ message }}
+                            </p>
+
+                        </div>
+
+
+                        <!-- CLOSE -->
+                        <button
+                            type="button"
+                            class="veridoc-toast-close"
+                            onclick="this.parentElement.remove()"
+                            aria-label="Fermer"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% endif %}
+
+    {% endwith %}
+
+
+    <!-- =====================================================
+         PAGE CONTENT
+         ===================================================== -->
+
+    {% block content %}
+    {% endblock %}
+
+
+    <!-- =====================================================
+         AUTO CLOSE POPUPS
+         ===================================================== -->
+
+    <script>
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+                const toasts =
+                    document.querySelectorAll(
+                        ".veridoc-toast"
+                    );
+
+                toasts.forEach(
+                    function (toast) {
+
+                        setTimeout(
+                            function () {
+
+                                toast.classList.add(
+                                    "veridoc-toast-hide"
+                                );
+
+                                setTimeout(
+                                    function () {
+
+                                        if (toast) {
+                                            toast.remove();
+                                        }
+
+                                    },
+                                    400
+                                );
+
+                            },
+                            6000
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+    </script>
+
 </body>
+
 </html>

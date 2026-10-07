@@ -1,11 +1,11 @@
 {% extends "base_users.html" %}
-{% block title %}Profile · Veridoc{% endblock %}
+{% block title %}Profil · Veridoc{% endblock %}
 {% block content %}
 
 <div class="header-row animate-rise">
   <div>
-    <p class="eyebrow">Account</p>
-    <h1 class="page-title">Profile</h1>
+    <p class="eyebrow">Compte</p>
+    <h1 class="page-title">Profil</h1>
     <p class="subtitle">Votre identité, vos clés cryptographiques et vos paramètres de sécurité.</p>
   </div>
 </div>
@@ -44,23 +44,26 @@
               </svg>
             {% endif %}
           </span>
-          {{ user.role }}
+          {% if user.role == 'ADMIN' %}Administrateur
+          {% elif user.role == 'MANAGER' %}Gestionnaire
+          {% elif user.role == 'CLIENT' %}Client
+          {% else %}{{ user.role }}{% endif %}
         </span>
       </div>
     </div>
 
     <div class="info-list">
       <div class="info-row">
-        <span>Member since</span>
+        <span>Membre depuis</span>
         <strong>{{ profile_user.created_at.strftime("%d/%m/%Y") if profile_user.created_at else "—" }}</strong>
       </div>
       <div class="info-row">
-        <span>Signing keys</span>
+        <span>Clés de signature</span>
         <strong>
           {% if profile_user.has_signing_keys %}
             <span style="color:hsl(var(--primary));">✓ RSA-3072</span>
           {% else %}
-            <span style="color:hsl(var(--destructive));">✗ Missing</span>
+            <span style="color:hsl(var(--destructive));">✗ Manquante</span>
           {% endif %}
         </strong>
       </div>
@@ -77,7 +80,7 @@
       </span>
       <div>
         <h2>Mes informations</h2>
-        <p>Modifier votre nom affiché et votre adresse email.</p>
+        <p>Modifier votre nom affiché et votre adresse e-mail.</p>
       </div>
     </div>
 
@@ -98,7 +101,7 @@
       </label>
 
       <label>
-        <span class="field-label">Adresse email</span>
+        <span class="field-label">Adresse e-mail</span>
         <input class="input" type="email" name="email"
                value="{{ profile_user.email }}"
                maxlength="120" required>
@@ -135,7 +138,7 @@
           <rect x="9" y="9" width="13" height="13" rx="2"/>
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
         </svg>
-        Copy
+        Copier
       </button>
     </div>
     <pre class="pubkey-pem" id="pubkey-pem">{{ profile_user.public_key_pem }}</pre>
@@ -184,7 +187,7 @@
         </svg>
       </div>
       <h2>Changer le mot de passe</h2>
-      <button class="icon-btn" id="btn-close-password" type="button" aria-label="Close">
+      <button class="icon-btn" id="btn-close-password" type="button" aria-label="Fermer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
         </svg>
@@ -205,7 +208,7 @@
         <div class="password-input-wrap">
           <input class="input" type="password" name="current_password"
                  id="pwd-current" required autocomplete="current-password">
-          <button type="button" class="pwd-toggle" data-target="pwd-current" aria-label="Show password">
+          <button type="button" class="pwd-toggle" data-target="pwd-current" aria-label="Afficher le mot de passe">
             {# Œil ouvert (caché par défaut) #}
             <svg class="pwd-icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
@@ -227,7 +230,7 @@
         <div class="password-input-wrap">
           <input class="input" type="password" name="new_password"
                  id="pwd-new" minlength="12" required autocomplete="new-password">
-          <button type="button" class="pwd-toggle" data-target="pwd-new" aria-label="Show password">
+          <button type="button" class="pwd-toggle" data-target="pwd-new" aria-label="Afficher le mot de passe">
             <svg class="pwd-icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
               <circle cx="12" cy="12" r="3"/>
@@ -248,7 +251,7 @@
         <div class="password-input-wrap">
           <input class="input" type="password" name="confirm_password"
                  id="pwd-confirm" minlength="12" required autocomplete="new-password">
-          <button type="button" class="pwd-toggle" data-target="pwd-confirm" aria-label="Show password">
+          <button type="button" class="pwd-toggle" data-target="pwd-confirm" aria-label="Afficher le mot de passe">
             <svg class="pwd-icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
               <circle cx="12" cy="12" r="3"/>
@@ -286,9 +289,9 @@
       const pem = document.getElementById('pubkey-pem').textContent;
       try {
         await navigator.clipboard.writeText(pem);
-        btnCopy.textContent = 'Copied !';
+        btnCopy.textContent = 'Copié !';
         setTimeout(() => {
-          btnCopy.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+          btnCopy.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copier`;
         }, 2000);
       } catch (err) {
         alert('Copie impossible dans ce navigateur.');
@@ -320,7 +323,7 @@
         eyeOff.style.display = isHidden ? 'none'  : 'block';
       }
 
-      btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+      btn.setAttribute('aria-label', isHidden ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
     });
   });
 

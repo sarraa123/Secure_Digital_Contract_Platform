@@ -23,7 +23,7 @@
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
   </svg>
-  Back to contracts
+  Retour aux contrats
 </a>
 
 <div class="detail-head animate-rise">
@@ -36,12 +36,18 @@
     <div>
       <div class="title-row">
         <h1>{{ contract.title }}</h1>
-        <span class="pill {{ contract.status|lower }}">{{ contract.status }}</span>
+        <span class="pill {{ contract.status|lower }}">
+          {% if contract.status == 'DRAFT' %}Brouillon
+          {% elif contract.status == 'SHARED' %}Partagé
+          {% elif contract.status == 'VALIDATED' %}Validé
+          {% elif contract.status == 'SIGNED' %}Signé
+          {% else %}{{ contract.status }}{% endif %}
+        </span>
       </div>
       <p class="owner-meta">
-        Owned by <strong style="color:hsl(var(--foreground));">{{ contract.owner_name }}</strong>
+        Propriétaire <strong style="color:hsl(var(--foreground));">{{ contract.owner_name }}</strong>
         · Version {{ contract.version }}
-        · Updated {{ contract.updated_at_str }}
+        · Mis à jour le {{ contract.updated_at_str }}
       </p>
     </div>
   </div>
@@ -52,7 +58,7 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>
       </svg>
-      Download
+      Télécharger
     </a>
     {% endif %}
 
@@ -61,7 +67,7 @@
         <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
         <circle cx="12" cy="12" r="3"/>
       </svg>
-      Preview
+      Aperçu
     </button>
 
     {% if contract.status == 'SHARED' and 'sign' in contract.permissions %}
@@ -69,7 +75,7 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
       </svg>
-      Validate contract
+      Valider le contrat
     </button>
     {% endif %}
 
@@ -78,7 +84,7 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
       </svg>
-      Sign contract
+      Signer le contrat
     </button>
     {% endif %}
   </div>
@@ -126,12 +132,12 @@
 <div id="action-error" class="modal-error" style="display:none;"></div>
 
 <div class="panel animate-rise delay-1" style="border-radius:12px;padding:16px;margin-bottom:20px;">
-  <p class="label" style="margin:0 0 12px;">Contract metadata</p>
+  <p class="label" style="margin:0 0 12px;">Métadonnées du contrat</p>
   <div class="meta-grid">
     <div><span class="meta-k">Type</span><span class="meta-v">{{ contract.contract_type }}</span></div>
     <div><span class="meta-k">Client</span><span class="meta-v">{{ contract.client_name }}</span></div>
-    <div><span class="meta-k">Start date</span><span class="meta-v">{{ contract.start_date_str }}</span></div>
-    <div><span class="meta-k">End date</span><span class="meta-v">{{ contract.end_date_str }}</span></div>
+    <div><span class="meta-k">Date de début</span><span class="meta-v">{{ contract.start_date_str }}</span></div>
+    <div><span class="meta-k">Date de fin</span><span class="meta-v">{{ contract.end_date_str }}</span></div>
   </div>
   <p style="margin-top:14px;font-size:12px;line-height:1.6;color:hsl(var(--muted-foreground));">
     {{ contract.description }}
@@ -159,7 +165,7 @@
         🔐 Certificat crypto (.txt)
       </a>
       <button class="btn outline sm" id="btn-verify-signature" type="button">
-        Verify signature
+        Vérifier la signature
       </button>
     </div>
   </div>
@@ -171,7 +177,7 @@
   <section class="panel section-card">
     <div class="lifecycle-head">
       <div>
-        <p class="label">Lifecycle</p>
+        <p class="label">Cycle de vie</p>
         <h2>Suivi de validation</h2>
       </div>
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="hsl(214 17% 48%)" stroke-width="2">
@@ -180,10 +186,10 @@
     </div>
 
     <div class="timeline">
-      {% set steps = [('DRAFT','Created','Draft created and ready for internal review'),
-                       ('SHARED','Shared','Permissions granted to external collaborators'),
-                       ('VALIDATED','Validated','Integrity check passed'),
-                       ('SIGNED','Signed','Agreement completed and signed')] %}
+      {% set steps = [('DRAFT','Créé','Brouillon créé et prêt pour la révision interne'),
+                       ('SHARED','Partagé','Permissions accordées aux collaborateurs externes'),
+                       ('VALIDATED','Validé','Contrôle d\'intégrité réussi'),
+                       ('SIGNED','Signé','Accord finalisé et signé')] %}
       {% set states = ['DRAFT','SHARED','VALIDATED','SIGNED'] %}
       {% set current = states.index(contract.status) %}
       {% for key, label, detail in steps %}
@@ -209,7 +215,7 @@
 
   <aside style="display:flex;flex-direction:column;gap:22px;">
     <div class="panel aside-card">
-      <p class="label">Document integrity</p>
+      <p class="label">Intégrité du document</p>
       <div class="integrity-row">
         <span class="badge-circle {{ 'ok' if contract.integrity=='VERIFIED' else '' }}">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -218,22 +224,22 @@
         </span>
         <div>
           <span class="pill {{ 'verified' if contract.integrity=='VERIFIED' else 'unverified' }}">
-            {{ contract.integrity }}
+            {% if contract.integrity == 'VERIFIED' %}Vérifiée{% else %}Non vérifiée{% endif %}
           </span>
-          <p class="checked-at">HMAC-SHA256 verified</p>
+          <p class="checked-at">HMAC-SHA256 vérifié</p>
         </div>
       </div>
     </div>
 
     <div class="panel aside-card">
-      <p class="label">Your permissions</p>
+      <p class="label">Vos permissions</p>
       {% if contract.permissions %}
       <div class="perm-tags">
         {% for p in contract.permissions %}<span class="perm-tag">{{ p }}</span>{% endfor %}
       </div>
       {% else %}
       <p style="margin-top:14px;font-size:12px;color:hsl(var(--muted-foreground));">
-        No permissions.
+        Aucune permission.
       </p>
       {% endif %}
     </div>
@@ -245,14 +251,14 @@
   <div class="modal modal-preview">
     <div class="modal-head">
       <h2>{{ contract.title }}</h2>
-      <button class="icon-btn" id="btn-close-preview" type="button" aria-label="Close">
+      <button class="icon-btn" id="btn-close-preview" type="button" aria-label="Fermer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
         </svg>
       </button>
     </div>
     <div class="preview-body">
-      <iframe id="pdf-frame" src="" title="PDF preview"></iframe>
+      <iframe id="pdf-frame" src="" title="Aperçu PDF"></iframe>
     </div>
   </div>
 </div>
@@ -267,7 +273,7 @@
         </svg>
       </div>
       <h2>Confirmer la validation</h2>
-      <button class="icon-btn" id="btn-close-validate" type="button" aria-label="Close">
+      <button class="icon-btn" id="btn-close-validate" type="button" aria-label="Fermer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
         </svg>
@@ -309,7 +315,7 @@
         </svg>
       </div>
       <h2>Confirmer la signature</h2>
-      <button class="icon-btn" id="btn-close-sign" type="button" aria-label="Close">
+      <button class="icon-btn" id="btn-close-sign" type="button" aria-label="Fermer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
         </svg>

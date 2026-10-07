@@ -1,5 +1,5 @@
 {% extends "base_users.html" %}
-{% block title %}Client workspace · Veridoc{% endblock %}
+{% block title %}Espace client · Veridoc{% endblock %}
 {% block content %}
 
 <div class="header-row animate-rise">
@@ -121,8 +121,16 @@
           <p class="title">{{ c.title }}</p>
           <p class="meta">Version {{ c.version }} · Mis à jour le {{ c.updated_at_str }}</p>
         </div>
-        <span class="pill {{ c.status|lower }}">{{ c.status }}</span>
-        <span class="pill {{ 'verified' if c.integrity=='VERIFIED' else 'unverified' }}">{{ c.integrity }}</span>
+        <span class="pill {{ c.status|lower }}">
+          {% if c.status == 'DRAFT' %}Brouillon
+          {% elif c.status == 'SHARED' %}Partagé
+          {% elif c.status == 'VALIDATED' %}Validé
+          {% elif c.status == 'SIGNED' %}Signé
+          {% else %}{{ c.status }}{% endif %}
+        </span>
+        <span class="pill {{ 'verified' if c.integrity=='VERIFIED' else 'unverified' }}">
+          {% if c.integrity == 'VERIFIED' %}Vérifiée{% else %}Non vérifiée{% endif %}
+        </span>
       </a>
       {% endfor %}
     </div>

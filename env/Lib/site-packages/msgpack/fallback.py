@@ -37,6 +37,17 @@ else:
         return []
 
 
+# frozendict is a builtin type added in Python 3.15 (PEP 814).
+if sys.version_info >= (3, 15):
+    import builtins
+
+    frozendict = builtins.frozendict
+else:
+
+    class frozendict:
+        pass
+
+
 from .exceptions import BufferFull, ExtraData, FormatError, OutOfData, StackError
 from .ext import ExtType, Timestamp
 
@@ -695,6 +706,7 @@ class Packer:
             list_types = list
         else:
             list_types = (list, tuple)
+        dict_types = (dict, frozendict)
         while True:
             if nest_limit < 0:
                 raise ValueError("recursion limit exceeded")
@@ -788,7 +800,7 @@ class Packer:
                 for i in range(n):
                     self._pack(obj[i], nest_limit - 1)
                 return
-            if check(obj, dict):
+            if check(obj, dict_types):
                 return self._pack_map_pairs(len(obj), obj.items(), nest_limit - 1)
 
             if self._datetime and check(obj, _DateTime) and obj.tzinfo is not None:
@@ -825,6 +837,8 @@ class Packer:
             return ret
 
     def pack_array_header(self, n):
+        if n < 0:
+            raise ValueError("array size must be non-negative")
         if n >= 2**32:
             raise ValueError
         self._pack_array_header(n)
@@ -834,6 +848,8 @@ class Packer:
             return ret
 
     def pack_map_header(self, n):
+        if n < 0:
+            raise ValueError("map size must be non-negative")
         if n >= 2**32:
             raise ValueError
         self._pack_map_header(n)
