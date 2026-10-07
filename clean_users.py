@@ -13,7 +13,7 @@ from app.models import (
 from app.extensions import db
 
 
-USERNAMES_TO_DELETE = ["Maram", "Firas", "mariam"]
+USERNAMES_TO_DELETE = ["ghada", "Koussay", "Walid","Eya","Tawfik","Sarra"]
 
 
 def main():

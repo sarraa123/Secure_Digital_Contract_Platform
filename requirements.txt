@@ -17,3 +17,6 @@ Flask-SocketIO
 python-socketio 
 python-engineio 
 requests
+flask-talisman
+pyotp
+qrcode

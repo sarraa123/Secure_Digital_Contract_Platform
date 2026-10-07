@@ -17,7 +17,10 @@ class ManagerCreationForm(FlaskForm):
         "Email",
         validators=[
             DataRequired(),
-            Email(),
+            Email(
+                message="Adresse email invalide.",
+                check_deliverability=False,   # ← AJOUT : ne pas vérifier le DNS
+            ),
             Length(max=255),
         ],
     )
