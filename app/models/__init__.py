@@ -20,6 +20,7 @@ from .contract_message import ContractMessage
 
 # --- Amendements ---
 from .amendment_request import AmendmentRequest
+from .soc_alert import SOCAlert
 
 
 # ==========================================================
@@ -45,4 +46,5 @@ __all__ = [
 
     # Amendements
     "AmendmentRequest",
+    "SOCAlert",
 ]

@@ -5,10 +5,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_login import LoginManager, current_user
-from flask import Flask, flash, redirect, request, url_for,render_template
+from flask import Flask, app, flash, redirect, request, url_for,render_template
 from .config import Config
 from .extensions import db, migrate, csrf, login_manager, socketio
-
+from app.soc import soc_bp
 talisman = Talisman()
 
 # Flask-Login session protection
@@ -39,6 +39,7 @@ def create_app():
         __name__,
         instance_relative_config=True,
     )
+    app.register_blueprint(soc_bp)
 
     # ------------------------------------------------------
     # Configuration

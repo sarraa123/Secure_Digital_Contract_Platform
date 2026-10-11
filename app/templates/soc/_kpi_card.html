@@ -1,0 +1,57 @@
+{# Partial : carte KPI #}
+{# Variables : label, value, tone (neutral|danger|warning|success), icon #}
+
+<div class="admin-action-card soc-kpi-card soc-kpi-{{ tone|default('neutral') }}">
+    <div class="admin-action-icon soc-kpi-icon">
+        {% if icon == 'alert' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3l9 16H3L12 3Z" stroke="currentColor"
+                      stroke-width="1.7" stroke-linejoin="round"/>
+                <path d="M12 9v4" stroke="currentColor" stroke-width="1.7"
+                      stroke-linecap="round"/>
+            </svg>
+        {% elif icon == 'shield' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3l8 3v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-3Z"
+                      stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            </svg>
+        {% elif icon == 'login' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M14 4h5v16h-5" stroke="currentColor" stroke-width="1.7"
+                      stroke-linecap="round"/>
+                <path d="M4 12h10" stroke="currentColor" stroke-width="1.7"
+                      stroke-linecap="round"/>
+                <path d="M10 8l4 4-4 4" stroke="currentColor" stroke-width="1.7"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        {% elif icon == 'ban' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/>
+                <path d="M6 6l12 12" stroke="currentColor" stroke-width="1.7"
+                      stroke-linecap="round"/>
+            </svg>
+        {% elif icon == 'lock' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect x="5" y="10.5" width="14" height="9" rx="2"
+                      stroke="currentColor" stroke-width="1.7"/>
+                <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"
+                      stroke="currentColor" stroke-width="1.7"/>
+            </svg>
+        {% elif icon == 'clock' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/>
+                <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.7"
+                      stroke-linecap="round"/>
+            </svg>
+        {% else %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/>
+            </svg>
+        {% endif %}
+    </div>
+
+    <div class="admin-action-content">
+        <h3>{{ value }}</h3>
+        <p>{{ label }}</p>
+    </div>
+</div>

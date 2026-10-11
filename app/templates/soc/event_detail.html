@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}SOC — Détail événement{% endblock %}
+
+{% block content %}
+
+<div class="admin-layout">
+
+{% include "admin/_sidebar.html" with context %}
+    <main class="admin-main">
+
+        <header class="admin-topbar">
+            <div>
+                <span class="eyebrow">Événement #{{ event.id }}</span>
+                <h1>{{ event.event_type }}</h1>
+                <p class="admin-page-description">
+                    {{ event.timestamp.strftime('%d/%m/%Y %H:%M:%S UTC') }}
+                </p>
+            </div>
+
+            <a href="{{ url_for('soc.events') }}" class="soc-btn-reset">
+                ← Retour à la liste
+            </a>
+        </header>
+
+        <section class="admin-section soc-detail-grid">
+
+            <div class="card soc-panel">
+                <div class="soc-panel-header">
+                    <h2>Informations générales</h2>
+                </div>
+
+                <div class="soc-detail-rows">
+                    <div class="soc-detail-row">
+                        <span class="k">Type</span>
+                        <span class="v"><span class="soc-event-code">{{ event.event_type }}</span></span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Statut</span>
+                        <span class="v">
+                            <span class="soc-status soc-status-{{ event.status|lower }}">
+                                {{ event.status }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Horodatage</span>
+                        <span class="v soc-cell-mono">
+                            {{ event.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                        </span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Adresse IP</span>
+                        <span class="v soc-cell-mono">{{ event.ip_address or '—' }}</span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Endpoint</span>
+                        <span class="v soc-cell-mono">{{ event.endpoint or '—' }}</span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Utilisateur</span>
+                        <span class="v">
+                            {% if event.user_id %}
+                                <a href="{{ url_for('soc.user_timeline', user_id=event.user_id) }}"
+                                   class="soc-user-link">
+                                    #{{ event.user_id }} →
+                                </a>
+                            {% else %}—{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card soc-panel">
+                <div class="soc-panel-header">
+                    <h2>Détails techniques</h2>
+                </div>
+
+                {% if event.details %}
+                    <pre class="soc-json-block">{{ event.details }}</pre>
+                {% else %}
+                    <p class="soc-empty">Aucun détail supplémentaire.</p>
+                {% endif %}
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+{% endblock %}

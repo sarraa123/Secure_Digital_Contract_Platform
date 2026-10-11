@@ -42,19 +42,38 @@ def _document_hash(data: bytes) -> str:
 # =========================================================================
 #  Création d'une signature
 # =========================================================================
-def create_signature(contract_model, signer: User,
-                     png_bytes: bytes = None) -> Signature:
+def create_signature(contract_model, signer, png_bytes=None):
     """
-    Crée et persiste une signature RSA-PSS sur le contrat chiffré.
-    Si `png_bytes` est fourni, crée en plus une SignatureImage chiffrée.
+    Crée une signature RSA-PSS sur le contrat chiffré.
+    ✅ Vérifie qu'il n'y a pas déjà une signature.
+    ✅ Nettoie les éventuels orphelins.
     """
+    from app.models import Signature, SignatureImage
+
+    # ✅ 1. VÉRIFIER QU'IL N'Y A PAS DÉJÀ DE SIGNATURE
+    existing = Signature.query.filter_by(contract_id=contract_model.id).first()
+    if existing:
+        raise ValueError(
+            f"Le contrat #{contract_model.id} a déjà une signature."
+        )
+
+    # ✅ 2. NETTOYER LES ORPHELINS ÉVENTUELS
+    SignatureImage.query.filter(
+        ~SignatureImage.signature_id.in_(
+            db.session.query(Signature.id)
+        )
+    ).delete(synchronize_session=False)
+    db.session.commit()
+
+    # 3. Charger la clé privée
     private_key = load_private_key(signer)
 
+    # 4. Signer le contenu
     data = _signed_content(contract_model)
     doc_hash = _document_hash(data)
-
     signature_bytes = private_key.sign(data, _PSS_PADDING, hashes.SHA256())
 
+    # 5. Créer la signature
     sig = Signature(
         contract_id   = contract_model.id,
         signer_id     = signer.id,
@@ -64,8 +83,9 @@ def create_signature(contract_model, signer: User,
         signed_at     = datetime.utcnow(),
     )
     db.session.add(sig)
-    db.session.flush()   # pour avoir sig.id
+    db.session.flush()   # ← pour avoir sig.id
 
+    # 6. Ajouter l'image si fournie
     if png_bytes:
         w, h = signature_image_service._png_dimensions(png_bytes)
         img = SignatureImage(
@@ -78,10 +98,9 @@ def create_signature(contract_model, signer: User,
         )
         db.session.add(img)
 
+    # 7. Commit
     db.session.commit()
     return sig
-
-
 # =========================================================================
 #  Vérification d'une signature
 # =========================================================================

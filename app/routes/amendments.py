@@ -158,6 +158,9 @@ def finalize_amendment(contract_id):
             contract_id, modifications, result, current_user)
 
 
+# =========================================================================
+#  MODIFICATION DIRECTE (contrat non signé)
+# =========================================================================
 def _apply_modifications_directly(contract_id, modifications, ia_result, actor):
     """Modifie directement le contrat (non signé)."""
     from app.services import contract_service, chat_service
@@ -227,10 +230,18 @@ def _apply_modifications_directly(contract_id, modifications, ia_result, actor):
     })
 
 
+# =========================================================================
+#  MODIFICATION VIA AVENANT (contrat signé)
+#  ✅ CORRECTION : copier le PDF du chat vers l'avenant
+# =========================================================================
 def _apply_modifications_via_amendment(contract_id, modifications, ia_result, actor):
-    """Crée un avenant (contrat signé)."""
-    from app.services import amendment_service
+    """Crée un avenant (contrat signé) + copie le PDF le plus récent."""
+    from app.services import amendment_service, chat_service
+    from app.models import Contract
+    from app.services.integrity_service import compute_signature
+    from app.extensions import db
 
+    # 1. Créer la demande
     req = amendment_service.request_amendment(contract_id, actor)
     if not req.get("ok"):
         return jsonify({"ok": False, "error": req.get("error")}), 400
@@ -242,17 +253,39 @@ def _apply_modifications_via_amendment(contract_id, modifications, ia_result, ac
     except Exception:
         pass
 
+    # 2. Créer l'avenant
     apply_result = amendment_service.apply_modifications(
         request_id, actor, modifications)
 
     if not apply_result.get("ok"):
         return jsonify({"ok": False, "error": apply_result.get("error")}), 400
 
+    amendment_id = apply_result["amendment_contract_id"]
+
+    # ✅ 3. COPIER LE PDF LE PLUS RÉCENT DU CHAT VERS L'AVENANT
+    pdf_replaced = False
+    pdf_filename = None
+
+    latest_pdf_msg = chat_service.get_latest_pdf_message(contract_id)
+    if latest_pdf_msg and latest_pdf_msg.attachment_encrypted:
+        amendment = db.session.get(Contract, amendment_id)
+        if amendment:
+            amendment.encrypted_file = latest_pdf_msg.attachment_encrypted
+            amendment.integrity_hash = compute_signature(
+                amendment.encrypted_metadata, amendment.encrypted_file)
+            db.session.commit()
+            pdf_replaced = True
+            pdf_filename = latest_pdf_msg.attachment_filename
+            
+            print(f"[AMENDMENT] PDF remplacé vers #{amendment_id} : {pdf_filename}")
+
     return jsonify({
         "ok":                    True,
         "mode":                  "amendment",
-        "amendment_contract_id": apply_result["amendment_contract_id"],
+        "amendment_contract_id": amendment_id,
         "applied_modifications": apply_result["applied_modifications"],
+        "pdf_replaced":          pdf_replaced,
+        "pdf_filename":          pdf_filename,
         "resume":                ia_result.get("resume", ""),
         "provider":              ia_result.get("provider", ""),
     })

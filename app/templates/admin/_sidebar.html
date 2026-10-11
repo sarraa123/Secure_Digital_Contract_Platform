@@ -1,0 +1,164 @@
+{# =========================================================
+   SIDEBAR ADMIN — Réutilisable partout (admin + SOC)
+   Variables attendues :
+     - active : "admin-dashboard" | "admin-users" | "admin-managers"
+                | "soc-dashboard" | "soc-events" | "soc-alerts"
+   ========================================================= #}
+<aside class="admin-sidebar">
+
+    <!-- Brand -->
+    <div class="admin-brand">
+        <div class="admin-brand-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Z"
+                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                <path d="M9 12.5l2 2 4-4.5"
+                      stroke="currentColor" stroke-width="1.6"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <div>
+            <div class="admin-brand-name">Veridoc</div>
+            <div class="admin-brand-subtitle">Administration</div>
+        </div>
+    </div>
+
+    <!-- Navigation principale -->
+    <nav class="admin-navigation">
+
+        <div class="admin-nav-label">MENU</div>
+
+        <!-- Tableau de bord -->
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="admin-nav-item {% if active == 'admin-dashboard' %}active{% endif %}">
+            <span class="admin-nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <rect x="4" y="4" width="6" height="6" rx="1"
+                          stroke="currentColor" stroke-width="1.7"/>
+                    <rect x="14" y="4" width="6" height="6" rx="1"
+                          stroke="currentColor" stroke-width="1.7"/>
+                    <rect x="4" y="14" width="6" height="6" rx="1"
+                          stroke="currentColor" stroke-width="1.7"/>
+                    <rect x="14" y="14" width="6" height="6" rx="1"
+                          stroke="currentColor" stroke-width="1.7"/>
+                </svg>
+            </span>
+            <span>Tableau de bord</span>
+        </a>
+
+        <!-- Utilisateurs -->
+        <a href="{{ url_for('admin.users') }}"
+           class="admin-nav-item {% if active == 'admin-users' %}active{% endif %}">
+            <span class="admin-nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"
+                          stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <circle cx="9.5" cy="7" r="3"
+                            stroke="currentColor" stroke-width="1.7"/>
+                    <path d="M17 11a3 3 0 0 0 0-6"
+                          stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <path d="M21 20v-1.5a4 4 0 0 0-3-3.87"
+                          stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+            </span>
+            <span>Utilisateurs</span>
+        </a>
+
+        <!-- Gestionnaires -->
+        <a href="{{ url_for('admin.create_manager_account') }}"
+           class="admin-nav-item {% if active == 'admin-managers' %}active{% endif %}">
+            <span class="admin-nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <circle cx="9" cy="8" r="3"
+                            stroke="currentColor" stroke-width="1.7"/>
+                    <path d="M3.5 20a5.5 5.5 0 0 1 11 0"
+                          stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <path d="M18 8v6M15 11h6"
+                          stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+            </span>
+            <span>Gestionnaires</span>
+        </a>
+
+    </nav>
+
+    <!-- ============================= -->
+    <!-- SECTION SÉCURITÉ (SOC) -->
+    <!-- ============================= -->
+    <nav class="admin-navigation">
+
+        <div class="admin-nav-label">SÉCURITÉ</div>
+
+        <!-- Journal de sécurité = lien vers SOC dashboard -->
+        <a href="{{ url_for('soc.dashboard') }}"
+           class="admin-nav-item {% if active and active.startswith('soc-') %}active{% endif %}">
+            <span class="admin-nav-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 3l8 3v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-3Z"
+                          stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                    <path d="M9 12l2 2 4-4"
+                          stroke="currentColor" stroke-width="1.7"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </span>
+            <span>Journal de sécurité</span>
+        </a>
+
+        <!-- Sous-liens SOC : visibles uniquement si on est dans /soc/* -->
+        {% if active and active.startswith('soc-') %}
+            <div class="admin-subnav">
+
+                <a href="{{ url_for('soc.dashboard') }}"
+                   class="admin-subnav-item {% if active == 'soc-dashboard' %}active{% endif %}">
+                    <span class="admin-subnav-bullet"></span>
+                    <span>Tableau de bord</span>
+                </a>
+
+                <a href="{{ url_for('soc.events') }}"
+                   class="admin-subnav-item {% if active == 'soc-events' %}active{% endif %}">
+                    <span class="admin-subnav-bullet"></span>
+                    <span>Événements</span>
+                </a>
+
+                <a href="{{ url_for('soc.alerts') }}"
+                   class="admin-subnav-item {% if active == 'soc-alerts' %}active{% endif %}">
+                    <span class="admin-subnav-bullet"></span>
+                    <span>Alertes</span>
+                </a>
+
+            </div>
+        {% endif %}
+
+    </nav>
+
+    <!-- Bottom user -->
+    <div class="admin-sidebar-bottom">
+        <div class="admin-user-mini">
+            <div class="admin-user-avatar">
+                {{ current_user.username[0]|upper }}
+            </div>
+            <div class="admin-user-info">
+                <strong>{{ current_user.username }}</strong>
+                <span>Administrateur</span>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="admin-logout">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"
+                          stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    <path d="M14 8l4 4-4 4"
+                          stroke="currentColor" stroke-width="1.7"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 12h8"
+                          stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+                Déconnexion
+            </button>
+        </form>
+    </div>
+
+</aside>

@@ -1,5 +1,6 @@
 """
-Script pour supprimer proprement 3 utilisateurs.
+Script pour supprimer tous les utilisateurs et leurs données associées.
+ATTENTION : opération destructive et irréversible après commit.
 """
 
 from app import create_app
@@ -9,55 +10,100 @@ from app.models import (
     AuditLog,
     MFARecoveryCode,
     Signature,
+    Notification,
 )
 from app.extensions import db
-
-
-USERNAMES_TO_DELETE = ["ghada", "Koussay", "Walid","Eya","Tawfik","Sarra"]
 
 
 def main():
     app = create_app()
 
     with app.app_context():
-        for username in USERNAMES_TO_DELETE:
-            u = User.query.filter_by(username=username).first()
+        try:
+            users = User.query.all()
 
-            if not u:
-                print(f"⚠️  {username} introuvable")
-                continue
+            if not users:
+                print("Aucun utilisateur à supprimer.")
+                return
 
-            print(f"\n🗑️  Suppression de {u.username} (id={u.id})")
+            print(f"⚠️ {len(users)} utilisateurs vont être supprimés.")
 
-            # 1. Supprime les security_events
-            n1 = SecurityEvent.query.filter_by(user_id=u.id).delete()
-            print(f"   - {n1} security_events supprimés")
+            # Afficher les comptes concernés avant suppression
+            for user in users:
+                print(f"   - {user.username} (id={user.id}, rôle={user.role})")
 
-            # 2. Supprime les audit_logs
-            n2 = AuditLog.query.filter_by(user_id=u.id).delete()
-            print(f"   - {n2} audit_logs supprimés")
+            confirmation = input(
+                "\nConfirmer la suppression de TOUS les utilisateurs ? "
+                "(oui/non) : "
+            ).strip().lower()
 
-            # 3. Supprime les codes MFA
-            n3 = MFARecoveryCode.query.filter_by(user_id=u.id).delete()
-            print(f"   - {n3} mfa_recovery_codes supprimés")
+            if confirmation != "oui":
+                print("❌ Suppression annulée.")
+                return
 
-            # 4. Supprime les signatures
-            n4 = Signature.query.filter_by(signer_id=u.id).delete()
-            print(f"   - {n4} signatures supprimées")
+            for user in users:
+                user_id = user.id
+                username = user.username
 
-            # 5. Supprime le user
-            db.session.delete(u)
-            print(f"   ✅ {u.username} supprimé")
+                print(f"\n🗑️ Suppression de {username} (id={user_id})")
 
-        # Commit final
-        db.session.commit()
-        print("\n🎉 Suppression terminée !")
+                # 1. Supprimer les notifications
+                n_notifications = Notification.query.filter_by(
+                    user_id=user_id
+                ).delete(synchronize_session=False)
 
-        # Vérification
-        remaining = User.query.all()
-        print(f"\n👥 Utilisateurs restants : {len(remaining)}")
-        for user in remaining:
-            print(f"   - {user.username} ({user.role}) | status={user.status}")
+                # 2. Supprimer les événements de sécurité
+                n_security = SecurityEvent.query.filter_by(
+                    user_id=user_id
+                ).delete(synchronize_session=False)
+
+                # 3. Supprimer les journaux d'audit
+                n_audit = AuditLog.query.filter_by(
+                    user_id=user_id
+                ).delete(synchronize_session=False)
+
+                # 4. Supprimer les codes de récupération MFA
+                n_mfa = MFARecoveryCode.query.filter_by(
+                    user_id=user_id
+                ).delete(synchronize_session=False)
+
+                # 5. Supprimer les signatures créées par l'utilisateur
+                n_signatures = Signature.query.filter_by(
+                    signer_id=user_id
+                ).delete(synchronize_session=False)
+
+                print(f"   - {n_notifications} notifications supprimées")
+                print(f"   - {n_security} événements de sécurité supprimés")
+                print(f"   - {n_audit} journaux d'audit supprimés")
+                print(f"   - {n_mfa} codes MFA supprimés")
+                print(f"   - {n_signatures} signatures supprimées")
+
+                # 6. Supprimer l'utilisateur
+                db.session.delete(user)
+
+                print(f"   ✅ {username} traité")
+
+            # Valider toutes les suppressions en une seule transaction
+            db.session.commit()
+
+            print("\n🎉 Suppression terminée avec succès !")
+
+        except Exception as e:
+            db.session.rollback()
+            print("\n❌ Erreur lors de la suppression :")
+            print(e)
+            print("↩️ Toutes les modifications de cette transaction ont été annulées.")
+
+        finally:
+            remaining = User.query.all()
+
+            print(f"\n👥 Utilisateurs restants : {len(remaining)}")
+
+            for user in remaining:
+                print(
+                    f"   - {user.username} "
+                    f"({user.role}) | status={user.status}"
+                )
 
 
 if __name__ == "__main__":

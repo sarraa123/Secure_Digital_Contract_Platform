@@ -58,6 +58,7 @@ def dashboard():
 
     return render_template(
         "admin/dashboard.html",
+        active="admin-dashboard",      # ← AJOUT
         user=current_user,
     )
 
@@ -97,6 +98,7 @@ def users():
 
     return render_template(
         "admin/users.html",
+        active="admin-users",          # ← AJOUT
         users=pending_users,
     )
 
@@ -560,5 +562,6 @@ def create_manager_account():
 
     return render_template(
         "admin/create_manager.html",
+        active="admin-managers",       # ← AJOUT
         form=form,
     )

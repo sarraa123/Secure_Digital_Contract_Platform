@@ -698,10 +698,21 @@ def sign_contract(contract_id: int, actor: User,
     try:
         sig = signature_service.create_signature(model, actor, png_bytes)
     except Exception as e:
+        db.session.rollback()
+        
+        # ✅ LOG L'ERREUR RÉELLE (pour debug)
+        import traceback
+        print("=" * 60)
+        print("[SIGN ERROR] Exception réelle :")
+        print(f"  Type    : {type(e).__name__}")
+        print(f"  Message : {str(e)}")
+        print("  Traceback :")
+        traceback.print_exc()
+        print("=" * 60)
+        
         log_event("SIGNATURE_FAILED", user_id=actor.id, status="500",
-                  details=f"exception={type(e).__name__}")
+                details=f"exception={type(e).__name__} error={str(e)[:100]}")
         return {"ok": False, "error": "Échec du calcul de la signature."}
-
     # --- Notifications email (propriétaire + signataire avec certificat)
     try:
         view = load_contract(contract_id, actor)
