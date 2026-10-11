@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}SOC — Tableau de bord{% endblock %}
+
+{% block content %}
+
+<div class="admin-layout">
+
+{% include "admin/_sidebar.html" with context %}
+    <main class="admin-main">
+
+        <!-- Header -->
+        <header class="admin-topbar">
+            <div>
+                <span class="eyebrow">Surveillance de sécurité</span>
+                <h1>Tableau de bord SOC</h1>
+                <p class="admin-page-description">
+                    Vue d'ensemble des événements de sécurité et des alertes
+                    des dernières {{ kpis.window_hours }} heures.
+                </p>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center;">
+                <!-- Sélecteur de fenêtre -->
+                <form method="GET" style="display:flex;gap:6px;align-items:center;">
+                    <select name="hours" class="form-input"
+                            style="padding:8px 12px;width:auto;"
+                            onchange="this.form.submit()">
+                        <option value="1"  {% if hours == 1 %}selected{% endif %}>1h</option>
+                        <option value="6"  {% if hours == 6 %}selected{% endif %}>6h</option>
+                        <option value="24" {% if hours == 24 %}selected{% endif %}>24h</option>
+                        <option value="72" {% if hours == 72 %}selected{% endif %}>3 jours</option>
+                        <option value="168" {% if hours == 168 %}selected{% endif %}>7 jours</option>
+                    </select>
+                </form>
+
+                <!-- Bouton détection manuelle -->
+                <form method="POST" action="{{ url_for('soc.detection_run') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="admin-primary-button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M21 12a9 9 0 1 1-3-6.7" stroke="currentColor"
+                                  stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M21 3v6h-6" stroke="currentColor"
+                                  stroke-width="1.8" stroke-linecap="round"
+                                  stroke-linejoin="round"/>
+                        </svg>
+                        Lancer la détection
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        <!-- ============================= -->
+        <!-- KPI CARDS -->
+        <!-- ============================= -->
+        <section class="admin-section">
+
+            <div class="soc-kpi-grid">
+
+                {% with label="Événements", value=kpis.total_events, tone="neutral", icon="shield" %}
+                    {% include "soc/_kpi_card.html" with context %}
+                {% endwith %}
+
+                {% with label="Échecs connexion", value=kpis.failed_logins, tone="warning", icon="login" %}
+                    {% include "soc/_kpi_card.html" with context %}
+                {% endwith %}
+
+                {% with label="Force brute", value=kpis.brute_force, tone="danger", icon="ban" %}
+                    {% include "soc/_kpi_card.html" with context %}
+                {% endwith %}
+
+                {% with label="Accès refusés", value=kpis.unauthorized, tone="danger", icon="ban" %}
+                    {% include "soc/_kpi_card.html" with context %}
+                {% endwith %}
+
+                {% with label="Échecs MFA", value=kpis.mfa_failures, tone="warning", icon="lock" %}
+                    {% include "soc/_kpi_card.html" with context %}
+                {% endwith %}
+
+                {% with label="Échecs intégrité", value=kpis.integrity_failures, tone="danger", icon="shield" %}
+                    {% include "soc/_kpi_card.html" with context %}
+                {% endwith %}
+
+                {% with label="Sessions expirées", value=kpis.session_expired, tone="neutral", icon="clock" %}
+                    {% include "soc/_kpi_card.html" with context %}
+                {% endwith %}
+
+                {% with label="Alertes ouvertes", value=kpis.open_alerts, tone="warning", icon="alert" %}
+                    {% include "soc/_kpi_card.html" with context %}
+                {% endwith %}
+
+            </div>
+
+            {% if kpis.critical_alerts > 0 %}
+                <div class="soc-critical-banner">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3l9 16H3L12 3Z" stroke="currentColor"
+                              stroke-width="1.7" stroke-linejoin="round"/>
+                        <path d="M12 9v4" stroke="currentColor"
+                              stroke-width="1.7" stroke-linecap="round"/>
+                        <circle cx="12" cy="16.5" r="0.8" fill="currentColor"/>
+                    </svg>
+                    <div>
+                        <strong>{{ kpis.critical_alerts }} alerte(s) CRITIQUE(s)</strong>
+                        <p>Action immédiate requise.
+                           <a href="{{ url_for('soc.alerts', severity='CRITICAL', status='NEW') }}">
+                               Voir les alertes →
+                           </a>
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+
+        </section>
+
+        <!-- ============================= -->
+        <!-- GRID : Top IPs / Top Events / Top Users -->
+        <!-- ============================= -->
+        <section class="admin-section soc-grid-3">
+
+            <!-- Top IPs -->
+            <div class="card soc-panel">
+                <div class="soc-panel-header">
+                    <h2>Top IPs suspectes</h2>
+                    <span class="soc-panel-sub">Échecs/refus — {{ hours }}h</span>
+                </div>
+                {% if top_ips %}
+                    <ul class="soc-list">
+                        {% for item in top_ips %}
+                            <li>
+                                <code>{{ item.ip }}</code>
+                                <span class="soc-badge soc-badge-danger">{{ item.count }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="soc-empty">Aucune IP suspecte.</p>
+                {% endif %}
+            </div>
+
+            <!-- Top Event Types -->
+            <div class="card soc-panel">
+                <div class="soc-panel-header">
+                    <h2>Types d'événements</h2>
+                    <span class="soc-panel-sub">{{ hours }}h</span>
+                </div>
+                {% if top_events %}
+                    <ul class="soc-list">
+                        {% for item in top_events %}
+                            <li>
+                                <span class="soc-event-code">{{ item.event_type }}</span>
+                                <span class="soc-badge">{{ item.count }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="soc-empty">Aucun événement.</p>
+                {% endif %}
+            </div>
+
+            <!-- Top Users -->
+            <div class="card soc-panel">
+                <div class="soc-panel-header">
+                    <h2>Utilisateurs à risque</h2>
+                    <span class="soc-panel-sub">Échecs — {{ hours }}h</span>
+                </div>
+                {% if top_users %}
+                    <ul class="soc-list">
+                        {% for item in top_users %}
+                            <li>
+                                <a href="{{ url_for('soc.user_timeline', user_id=item.user_id) }}"
+                                   class="soc-user-link">
+                                    {{ item.username }}
+                                </a>
+                                <span class="soc-badge soc-badge-warning">{{ item.count }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="soc-empty">Aucun utilisateur suspect.</p>
+                {% endif %}
+            </div>
+
+        </section>
+
+        <!-- ============================= -->
+        <!-- ALERTES RÉCENTES -->
+        <!-- ============================= -->
+        <section class="admin-section">
+
+            <div class="admin-section-header">
+                <div>
+                    <span class="eyebrow">Détection</span>
+                    <h2>Alertes récentes</h2>
+                </div>
+                <a href="{{ url_for('soc.alerts') }}"
+                   class="admin-primary-button">
+                    Voir toutes les alertes →
+                </a>
+            </div>
+
+            {% if recent_alerts %}
+                <div class="soc-alert-list">
+                    {% for alert in recent_alerts %}
+                        <a href="{{ url_for('soc.alert_detail', alert_id=alert.id) }}"
+                           class="soc-alert-item">
+                            <span class="soc-severity soc-severity-{{ alert.severity|lower }}">
+                                {{ alert.severity }}
+                            </span>
+                            <div class="soc-alert-body">
+                                <strong>{{ alert.title }}</strong>
+                                <span class="soc-alert-meta">
+                                    {{ alert.event_count }} événement(s) ·
+                                    {{ alert.created_at.strftime('%d/%m %H:%M') }}
+                                    {% if alert.ip_address %} · IP {{ alert.ip_address }}{% endif %}
+                                </span>
+                            </div>
+                            <span class="soc-status soc-status-{{ alert.status|lower }}">
+                                {{ alert.status }}
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="admin-empty-state">
+                    <div class="admin-empty-icon">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 3l8 3v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-3Z"
+                                  stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                            <path d="M9 12l2 2 4-4" stroke="currentColor"
+                                  stroke-width="1.7" stroke-linecap="round"
+                                  stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h2>Aucune alerte</h2>
+                    <p>Le système n'a détecté aucune anomalie.</p>
+                </div>
+            {% endif %}
+
+        </section>
+
+    </main>
+
+</div>
+
+{% endblock %}

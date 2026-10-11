@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ contract.title }}</title>
+</head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;margin:0;padding:20px;">
+  <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+    <div style="text-align:center;font-size:12px;color:#64748b;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:24px;">
+      Veridoc
+    </div>
+
+    <h1 style="font-size:22px;color:#0f172a;margin:0 0 16px;">
+      ✓ Contrat signé
+    </h1>
+
+    <p style="color:#475569;line-height:1.6;font-size:15px;">
+  Bonjour <strong>{{ recipient_name }}</strong>,
+</p>
+
+<p style="color:#475569;line-height:1.6;font-size:15px;">
+  Le contrat <strong>« {{ contract.title }} »</strong> vient d'être signé électroniquement.
+</p>
+
+<table style="width:100%;border-collapse:collapse;margin:24px 0;font-size:14px;">
+  <tr>
+    <td style="padding:8px 0;color:#64748b;width:40%;">Contrat</td>
+    <td style="padding:8px 0;color:#0f172a;font-weight:600;">{{ contract.title }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#64748b;">Version</td>
+    <td style="padding:8px 0;color:#0f172a;">{{ contract.version }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#64748b;">Propriétaire</td>
+    <td style="padding:8px 0;color:#0f172a;">{{ contract.owner_name }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#64748b;">Signataire</td>
+    <td style="padding:8px 0;color:#0f172a;">
+      {{ actor.username }} ({{ actor.email }})
+      {% if cc_signer %}<span style="color:#94a3b8;font-size:12px;"> · en copie</span>{% endif %}
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#64748b;">Algorithme</td>
+    <td style="padding:8px 0;color:#0f172a;">RSA-3072 · PSS · SHA-256</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#64748b;">Date de signature</td>
+    <td style="padding:8px 0;color:#0f172a;">
+      {{ signature.signed_at.strftime("%d/%m/%Y %H:%M") }} UTC
+    </td>
+  </tr>
+</table>
+
+    <div style="background:#ecfdf5;border-left:3px solid #10b981;padding:16px;border-radius:8px;margin:24px 0;">
+      <p style="margin:0;font-size:13px;color:#047857;line-height:1.6;">
+        ✓ Signature vérifiée cryptographiquement.<br>
+        Le document ne peut plus être modifié.
+      </p>
+    </div>
+
+    <p style="color:#475569;line-height:1.6;font-size:15px;">
+      Vous pouvez vérifier cette signature à tout moment :
+    </p>
+
+    <p style="text-align:center;margin:24px 0;">
+      <a href="{{ verify_url }}"
+         style="display:inline-block;background:#0d9488;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:14px;">
+        Vérifier en ligne
+      </a>
+    </p>
+
+    <p style="font-size:12px;color:#94a3b8;line-height:1.6;text-align:center;margin-top:32px;">
+      Cet email a été généré automatiquement par Veridoc.<br>
+      Ne pas répondre.
+    </p>
+  </div>
+</body>
+</html>

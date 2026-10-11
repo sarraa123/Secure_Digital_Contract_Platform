@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}SOC — Timeline {{ target_user.username }}{% endblock %}
+
+{% block content %}
+
+<div class="admin-layout">
+
+{% include "soc/_sidebar.html" with context %}
+    <main class="admin-main">
+
+        <header class="admin-topbar">
+            <div>
+                <span class="eyebrow">Timeline utilisateur</span>
+                <h1>{{ target_user.username }}</h1>
+                <p class="admin-page-description">
+                    {{ target_user.email }} ·
+                    Rôle {{ target_user.role }} ·
+                    {{ timeline|length }} événement(s)
+                </p>
+            </div>
+
+            <a href="{{ url_for('soc.events', user_id=target_user.id) }}"
+               class="soc-btn-reset">
+                Filtrer dans les événements →
+            </a>
+        </header>
+
+        <section class="admin-section">
+
+            {% if timeline %}
+                <div class="soc-timeline">
+                    {% for event in timeline %}
+                        <div class="soc-timeline-item soc-tl-{{ event.status|lower }}">
+                            <div class="soc-timeline-dot"></div>
+
+                            <div class="soc-timeline-content">
+                                <div class="soc-timeline-header">
+                                    <span class="soc-event-code">{{ event.event_type }}</span>
+                                    <span class="soc-status soc-status-{{ event.status|lower }}">
+                                        {{ event.status }}
+                                    </span>
+                                    <span class="soc-timeline-time">
+                                        {{ event.timestamp[:19].replace('T', ' ') }}
+                                    </span>
+                                </div>
+
+                                <div class="soc-timeline-meta">
+                                    {% if event.ip_address %}
+                                        <span>IP : <code>{{ event.ip_address }}</code></span>
+                                    {% endif %}
+                                    {% if event.endpoint %}
+                                        <span>Endpoint : <code>{{ event.endpoint }}</code></span>
+                                    {% endif %}
+                                </div>
+
+                                {% if event.details %}
+                                    <details class="soc-timeline-details">
+                                        <summary>Détails</summary>
+                                        <pre class="soc-json-block">{{ event.details | tojson(indent=2) }}</pre>
+                                    </details>
+                                {% endif %}
+
+                                <a href="{{ url_for('soc.event_detail', event_id=event.id) }}"
+                                   class="soc-detail-link">
+                                    Voir l'événement →
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="admin-empty-state">
+                    <div class="admin-empty-icon">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="8" stroke="currentColor"
+                                    stroke-width="1.5"/>
+                            <path d="M12 7v5l3 2" stroke="currentColor"
+                                  stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h2>Aucun événement</h2>
+                    <p>Cet utilisateur n'a aucun événement de sécurité enregistré.</p>
+                </div>
+            {% endif %}
+
+        </section>
+
+    </main>
+
+</div>
+
+{% endblock %}

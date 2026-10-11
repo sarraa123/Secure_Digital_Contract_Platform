@@ -1,0 +1,148 @@
+{% extends "base_users.html" %}
+{% block title %}Espace client · Veridoc{% endblock %}
+{% block content %}
+
+<div class="header-row animate-rise">
+  <div>
+    <p class="eyebrow">Espace client</p>
+    <h1 class="page-title">Vos contrats, en toute clarté.</h1>
+    <p class="subtitle">Consultez vos accords partagés et suivez chaque étape de validation et de signature.</p>
+  </div>
+  <a href="{{ url_for('client.contracts') }}" class="btn">
+    Voir mes contrats
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="stat-grid">
+  <div class="panel stat-card animate-rise delay-1">
+    <div class="stat-top">Contrats accessibles
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="hsl(174 52% 36%)" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+      </svg>
+    </div>
+    <p class="stat-value">{{ contracts|length }}</p>
+    <p class="stat-sub">Accords partagés avec vous</p>
+  </div>
+  <div class="panel stat-card animate-rise delay-2">
+    <div class="stat-top">À suivre
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+      </svg>
+    </div>
+    <p class="stat-value">{{ waiting|length + ready_sign|length }}</p>
+    <p class="stat-sub">Contrats encore en cours</p>
+  </div>
+  <div class="panel stat-card animate-rise delay-3">
+    <div class="stat-top">Signés
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2">
+        <path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    </div>
+    <p class="stat-value">{{ completed|length }}</p>
+    <p class="stat-sub">Accords finalisés</p>
+  </div>
+</div>
+
+<!-- Section : actions à faire -->
+{% if waiting or ready_sign %}
+<section class="panel section-card animate-rise delay-1" style="margin-bottom:22px;">
+  <div class="section-head">
+    <div>
+      <h2>Actions attendues de vous</h2>
+      <p>Ces contrats attendent votre validation ou votre signature.</p>
+    </div>
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="hsl(214 17% 48%)" stroke-width="2">
+      <path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+  </div>
+
+  <div class="row-list">
+    {% for c in waiting %}
+    <a href="{{ url_for('client.contract_detail', contract_id=c.id) }}" class="row-item">
+      <span class="icon-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+        </svg>
+      </span>
+      <div class="row-main">
+        <p class="title">{{ c.title }}</p>
+        <p class="meta">Propriétaire : {{ c.owner_name }}</p>
+      </div>
+      <span class="pill validated">À valider</span>
+    </a>
+    {% endfor %}
+
+    {% for c in ready_sign %}
+    <a href="{{ url_for('client.contract_detail', contract_id=c.id) }}" class="row-item">
+      <span class="icon-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        </svg>
+      </span>
+      <div class="row-main">
+        <p class="title">{{ c.title }}</p>
+        <p class="meta">Propriétaire : {{ c.owner_name }}</p>
+      </div>
+      <span class="pill signed">À signer</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- Section : tous les contrats -->
+<section class="panel section-card animate-rise delay-2">
+  <div class="section-head">
+    <div>
+      <h2>Mes contrats</h2>
+      <p>Chaque document est vérifié avant consultation.</p>
+    </div>
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="hsl(214 17% 48%)" stroke-width="2">
+      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  </div>
+
+  {% if contracts|length == 0 %}
+    <div class="empty-state">
+      <p class="empty-title">Aucun contrat partagé avec vous pour l'instant.</p>
+    </div>
+  {% else %}
+    <div class="row-list">
+      {% for c in contracts %}
+      <a href="{{ url_for('client.contract_detail', contract_id=c.id) }}" class="row-item">
+        <span class="icon-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+          </svg>
+        </span>
+        <div class="row-main">
+          <p class="title">{{ c.title }}</p>
+          <p class="meta">Version {{ c.version }} · Mis à jour le {{ c.updated_at_str }}</p>
+        </div>
+        <span class="pill {{ c.status|lower }}">
+          {% if c.status == 'DRAFT' %}Brouillon
+          {% elif c.status == 'SHARED' %}Partagé
+          {% elif c.status == 'VALIDATED' %}Validé
+          {% elif c.status == 'SIGNED' %}Signé
+          {% else %}{{ c.status }}{% endif %}
+        </span>
+        <span class="pill {{ 'verified' if c.integrity=='VERIFIED' else 'unverified' }}">
+          {% if c.integrity == 'VERIFIED' %}Vérifiée{% else %}Non vérifiée{% endif %}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
+<!-- Bandeau info -->
+<div class="info-banner animate-rise delay-3">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+  </svg>
+  <p>Vos accès sont contrôlés par contrat et chaque consultation importante est enregistrée.</p>
+</div>
+
+{% endblock %}

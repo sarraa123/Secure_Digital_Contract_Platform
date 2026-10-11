@@ -1,0 +1,106 @@
+{% extends "base_users.html" %}
+{% block title %}Mes contrats · Veridoc{% endblock %}
+{% block content %}
+
+<div class="header-row animate-rise">
+  <div>
+    <p class="eyebrow">Espace de travail contractuel</p>
+    <h1 class="page-title">Contrats</h1>
+    <p class="subtitle">Une source unique et claire pour chaque accord.</p>
+  </div>
+</div>
+
+<div class="panel animate-rise delay-1" style="border-radius:16px;">
+  <div class="toolbar">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+      </svg>
+      <input class="input" type="search" id="client-search" placeholder="Rechercher des contrats par titre…">
+    </div>
+    <div class="filter-box">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+      </svg>
+      <select id="client-status-filter">
+        <option value="ALL">Tous les statuts</option>
+        <option value="DRAFT">Brouillon</option>
+        <option value="SHARED">Partagé</option>
+        <option value="VALIDATED">Validé</option>
+        <option value="SIGNED">Signé</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="padding:0 20px 20px;">
+  {% if contracts|length == 0 %}
+    <div class="empty-state">
+      <p class="empty-title">Aucun contrat ne vous a encore été partagé.</p>
+    </div>
+  {% else %}
+    <table class="contracts-table" id="client-contracts-table">
+      <thead>
+        <tr>
+          <th>Contrat</th><th>Propriétaire</th><th>Statut</th><th>Intégrité</th><th>Mis à jour</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in contracts %}
+        <tr data-title="{{ c.title|lower }}" data-status="{{ c.status }}">
+          <td>
+            <a href="{{ url_for('client.contract_detail', contract_id=c.id) }}" class="contract-cell">
+              <span class="icon-box" style="width:32px;height:32px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+                </svg>
+              </span>
+              <span>
+                <span class="name">{{ c.title }}</span>
+                <span class="ver">Version {{ c.version }}</span>
+              </span>
+            </a>
+          </td>
+          <td class="owner">{{ c.owner_name }}</td>
+          <td>
+            <span class="pill {{ c.status|lower }}">
+              {% if c.status == 'DRAFT' %}Brouillon
+              {% elif c.status == 'SHARED' %}Partagé
+              {% elif c.status == 'VALIDATED' %}Validé
+              {% elif c.status == 'SIGNED' %}Signé
+              {% else %}{{ c.status }}{% endif %}
+            </span>
+          </td>
+          <td>
+            <span class="pill {{ 'verified' if c.integrity=='VERIFIED' else 'unverified' }}">
+              {% if c.integrity == 'VERIFIED' %}Vérifiée{% else %}Non vérifiée{% endif %}
+            </span>
+          </td>
+          <td class="owner">{{ c.updated_at_str }}</td>
+          <td><a class="open-link" href="{{ url_for('client.contract_detail', contract_id=c.id) }}">Ouvrir</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce() }}">
+  const searchInput = document.getElementById('client-search');
+  const statusSel   = document.getElementById('client-status-filter');
+  const rows        = document.querySelectorAll('#client-contracts-table tbody tr');
+
+  function filterRows() {
+    const q = searchInput.value.trim().toLowerCase();
+    const s = statusSel.value;
+    rows.forEach(tr => {
+      const titleOk  = tr.dataset.title.includes(q);
+      const statusOk = (s === 'ALL') || (tr.dataset.status === s);
+      tr.style.display = (titleOk && statusOk) ? '' : 'none';
+    });
+  }
+  searchInput.addEventListener('input', filterRows);
+  statusSel.addEventListener('change', filterRows);
+</script>
+
+{% endblock %}

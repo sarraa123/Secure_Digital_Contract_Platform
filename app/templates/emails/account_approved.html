@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Compte approuvé - Veridoc</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f8;
+    font-family: Arial, Helvetica, sans-serif;
+">
+
+    <div style="
+        max-width: 600px;
+        margin: 40px auto;
+        background-color: #ffffff;
+        padding: 35px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+    ">
+
+        <h2 style="
+            margin-top: 0;
+            color: #1f2937;
+        ">
+            Votre compte Veridoc a été approuvé
+        </h2>
+
+        <p>
+            Bonjour <strong>{{ username }}</strong>,
+        </p>
+
+        <p>
+            Bonne nouvelle !
+        </p>
+
+        <p>
+            Votre compte client Veridoc a été
+            <strong>approuvé</strong> par un administrateur.
+        </p>
+
+        <p>
+            Vous pouvez maintenant vous connecter à votre
+            compte avec vos identifiants.
+        </p>
+
+        <div style="
+            margin: 30px 0;
+            text-align: center;
+        ">
+
+            <a
+                href="{{ login_url }}"
+                style="
+                    display: inline-block;
+                    padding: 12px 24px;
+                    background-color: #2563eb;
+                    color: #ffffff;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: bold;
+                "
+            >
+                Se connecter à Veridoc
+            </a>
+
+        </div>
+
+        <p>
+            Ou utilisez directement ce lien :
+        </p>
+
+        <p>
+            <a href="{{ login_url }}">
+                {{ login_url }}
+            </a>
+        </p>
+
+        <p>
+            Pour des raisons de sécurité, ne partagez jamais
+            votre mot de passe.
+        </p>
+
+        <hr style="
+            border: 0;
+            border-top: 1px solid #e5e7eb;
+            margin: 30px 0;
+        ">
+
+        <p style="
+            color: #6b7280;
+            font-size: 13px;
+        ">
+            — L'équipe Veridoc
+        </p>
+
+    </div>
+
+</body>
+</html>

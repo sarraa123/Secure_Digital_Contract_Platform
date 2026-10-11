@@ -1,110 +1,157 @@
+{% extends "base.html" %}
 
-<!DOCTYPE html>
-<html lang="fr">
+{% block title %}Utilisateurs — Veridoc{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block content %}
 
-    <title>Administration des utilisateurs</title>
+<div class="admin-layout">
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
+    {# ============================= #}
+    {# SIDEBAR — partial unifié #}
+    {# ============================= #}
+    {% include "admin/_sidebar.html" with context %}
 
-<body>
+    {# ============================= #}
+    {# MAIN CONTENT #}
+    {# ============================= #}
+    <main class="admin-main">
 
-<div class="app-shell">
+        <!-- Header -->
+        <header class="admin-page-header">
 
-    <nav class="app-nav">
-        <div class="brand-mark">
-            <span class="brand-mark-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5Z" stroke="#0b1526" stroke-width="1.6" stroke-linejoin="round"/>
-                    <path d="M9 12.5l2 2 4-4.5" stroke="#0b1526" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <div>
+                <span class="admin-eyebrow">Administration</span>
+                <h1>Utilisateurs en attente</h1>
+                <p>Gérez les demandes d'inscription des nouveaux utilisateurs.</p>
+            </div>
+
+            <a href="{{ url_for('admin.create_manager_account') }}"
+               class="admin-primary-button">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5v14M5 12h14"
+                          stroke="currentColor" stroke-width="1.8"
+                          stroke-linecap="round"/>
                 </svg>
-            </span>
-            <span class="brand-mark-name">Veridoc</span>
-        </div>
-    </nav>
+                Créer un gestionnaire
+            </a>
 
-    <main class="app-main">
+        </header>
 
-        <div class="app-header">
-            <span class="eyebrow">Admin</span>
-            <h1>Utilisateurs en attente</h1>
-        </div>
-
+        <!-- Content -->
         {% if users %}
 
-            <div class="user-list">
+            <section class="admin-section">
 
-                {% for user in users %}
-
-                    <div class="card user-card">
-
-                        <div class="user-card-info">
-                            <h3>{{ user.username }}</h3>
-
-                            <div class="user-card-meta">
-                                <span>{{ user.email }}</span>
-                                <span class="dot"></span>
-                                <span class="badge badge-pending">{{ user.status }}</span>
-                                <span class="dot"></span>
-                                <span>Inscrit le {{ user.created_at }}</span>
-                            </div>
-                        </div>
-
-                        <div class="user-card-actions">
-
-                            <form
-                                method="POST"
-                                action="{{ url_for('admin.approve', user_id=user.id) }}"
-                            >
-
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token() }}"
-                                >
-
-                                <button type="submit" class="btn-approve">
-                                    Approuver
-                                </button>
-
-                            </form>
-
-
-                            <form
-                                method="POST"
-                                action="{{ url_for('admin.reject', user_id=user.id) }}"
-                            >
-
-                                <input
-                                    type="hidden"
-                                    name="csrf_token"
-                                    value="{{ csrf_token() }}"
-                                >
-
-                                <button type="submit" class="btn-reject">
-                                    Refuser
-                                </button>
-
-                            </form>
-
-                        </div>
-
+                <div class="admin-section-header">
+                    <div>
+                        <h2>Demandes d'inscription</h2>
+                        <p>Les comptes suivants nécessitent votre validation.</p>
                     </div>
+                    <span class="admin-count-badge">{{ users|length }}</span>
+                </div>
 
-                {% endfor %}
+                <div class="admin-user-list">
 
-            </div>
+                    {% for user in users %}
+
+                        <div class="admin-user-card">
+
+                            <div class="admin-user-card-left">
+
+                                <div class="admin-user-avatar large">
+                                    {{ user.username[:1]|upper }}
+                                </div>
+
+                                <div class="admin-user-card-info">
+
+                                    <h3>{{ user.username }}</h3>
+
+                                    <div class="admin-user-card-meta">
+                                        <span>{{ user.email }}</span>
+                                        <span class="admin-dot"></span>
+                                        <span class="admin-pending-badge">
+                                            {% if user.status == 'PENDING' %}
+                                                En attente
+                                            {% elif user.status == 'ACTIVE' %}
+                                                Actif
+                                            {% elif user.status == 'REJECTED' %}
+                                                Refusé
+                                            {% else %}
+                                                {{ user.status }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+
+                                    <small>Inscrit le {{ user.created_at }}</small>
+
+                                </div>
+
+                            </div>
+
+                            <div class="admin-user-card-actions">
+
+                                <!-- Approve -->
+                                <form method="POST"
+                                      action="{{ url_for('admin.approve', user_id=user.id) }}">
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+                                    <button type="submit" class="admin-approve-button">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <path d="M5 12l4 4L19 6"
+                                                  stroke="currentColor" stroke-width="1.8"
+                                                  stroke-linecap="round"
+                                                  stroke-linejoin="round"/>
+                                        </svg>
+                                        Approuver
+                                    </button>
+                                </form>
+
+                                <!-- Reject -->
+                                <form method="POST"
+                                      action="{{ url_for('admin.reject', user_id=user.id) }}">
+                                    <input type="hidden" name="csrf_token"
+                                           value="{{ csrf_token() }}">
+                                    <button type="submit" class="admin-reject-button">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <path d="M6 6l12 12M18 6L6 18"
+                                                  stroke="currentColor" stroke-width="1.8"
+                                                  stroke-linecap="round"/>
+                                        </svg>
+                                        Refuser
+                                    </button>
+                                </form>
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </section>
 
         {% else %}
 
-            <div class="card empty-state">
-                <h3>Aucun utilisateur en attente</h3>
-                <p>Les nouvelles demandes d'inscription apparaîtront ici.</p>
-            </div>
+            <!-- Empty state -->
+            <section class="admin-empty-state">
+
+                <div class="admin-empty-icon">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 11.5V7l-8-4-8 4v5c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10Z"
+                              stroke="currentColor" stroke-width="1.5"
+                              stroke-linejoin="round"/>
+                        <path d="M8.5 12l2.3 2.3 4.7-5"
+                              stroke="currentColor" stroke-width="1.6"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"/>
+                    </svg>
+                </div>
+
+                <h2>Aucun utilisateur en attente</h2>
+                <p>Toutes les demandes d'inscription ont été traitées.</p>
+
+            </section>
 
         {% endif %}
 
@@ -112,6 +159,4 @@
 
 </div>
 
-</body>
-
-</html>
+{% endblock %}

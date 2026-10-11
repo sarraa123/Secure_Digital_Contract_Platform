@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}SOC — Événements{% endblock %}
+
+{% block content %}
+
+<div class="admin-layout">
+
+{% include "admin/_sidebar.html" with context %}
+    <main class="admin-main">
+
+        <header class="admin-topbar">
+            <div>
+                <span class="eyebrow">Explorateur</span>
+                <h1>Événements de sécurité</h1>
+                <p class="admin-page-description">
+                    {{ pagination.total }} événement(s) correspondant aux filtres.
+                </p>
+            </div>
+
+            <a href="{{ url_for('soc.events_export', **filters_without_page) }}"
+               class="admin-primary-button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 3v12" stroke="currentColor" stroke-width="1.8"
+                          stroke-linecap="round"/>
+                    <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="1.8"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5 21h14" stroke="currentColor" stroke-width="1.8"
+                          stroke-linecap="round"/>
+                </svg>
+                Exporter CSV
+            </a>
+        </header>
+
+        <!-- Filtres -->
+        <section class="admin-section">
+            <form method="GET" class="soc-filter-bar">
+                {{ form.hidden_tag() }}
+
+                <div class="soc-filter-field">
+                    <label>Type</label>
+                    {{ form.event_type(class="form-input", placeholder="LOGIN_FAILED…") }}
+                </div>
+
+                <div class="soc-filter-field">
+                    <label>Statut</label>
+                    {{ form.status(class="form-input") }}
+                </div>
+
+                <div class="soc-filter-field">
+                    <label>ID Utilisateur</label>
+                    {{ form.user_id(class="form-input", placeholder="42") }}
+                </div>
+
+                <div class="soc-filter-field">
+                    <label>Adresse IP</label>
+                    {{ form.ip_address(class="form-input", placeholder="192.168.1.1") }}
+                </div>
+
+                <div class="soc-filter-field">
+                    <label>Du</label>
+                    {{ form.date_from(class="form-input") }}
+                </div>
+
+                <div class="soc-filter-field">
+                    <label>Au</label>
+                    {{ form.date_to(class="form-input") }}
+                </div>
+
+                <div class="soc-filter-actions">
+                    <button type="submit" class="admin-primary-button">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                            <circle cx="11" cy="11" r="7" stroke="currentColor"
+                                    stroke-width="1.8"/>
+                            <path d="M21 21l-4.3-4.3" stroke="currentColor"
+                                  stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                        Filtrer
+                    </button>
+                    <a href="{{ url_for('soc.events') }}" class="soc-btn-reset">Réinitialiser</a>
+                </div>
+            </form>
+        </section>
+
+        <!-- Tableau -->
+        <section class="admin-section">
+
+            {% if events %}
+                <div class="soc-table-wrap">
+                    <table class="soc-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Statut</th>
+                                <th>Utilisateur</th>
+                                <th>IP</th>
+                                <th>Endpoint</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in events %}
+                                <tr>
+                                    <td class="soc-cell-mono">
+                                        {{ e.timestamp.strftime('%d/%m %H:%M:%S') }}
+                                    </td>
+                                    <td>
+                                        <span class="soc-event-code">{{ e.event_type }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="soc-status soc-status-{{ e.status|lower }}">
+                                            {{ e.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if e.user_id %}
+                                            <a href="{{ url_for('soc.user_timeline', user_id=e.user_id) }}"
+                                               class="soc-user-link">
+                                                #{{ e.user_id }}
+                                            </a>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    <td class="soc-cell-mono">
+                                        {{ e.ip_address or '—' }}
+                                    </td>
+                                    <td class="soc-cell-mono soc-cell-trunc">
+                                        {{ e.endpoint or '—' }}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('soc.event_detail', event_id=e.id) }}"
+                                           class="soc-detail-link">
+                                            Détail →
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+{% if pagination.pages > 1 %}
+    <div class="soc-pagination">
+        {% if pagination.has_prev %}
+            <a href="{{ url_for('soc.events', page=pagination.prev_num, **filters_without_page) }}"
+               class="soc-page-btn">← Précédent</a>
+        {% endif %}
+
+        <span class="soc-page-info">
+            Page {{ pagination.page }} / {{ pagination.pages }}
+        </span>
+
+        {% if pagination.has_next %}
+            <a href="{{ url_for('soc.events', page=pagination.next_num, **filters_without_page) }}"
+               class="soc-page-btn">Suivant →</a>
+        {% endif %}
+    </div>
+{% endif %}
+            {% else %}
+                <div class="admin-empty-state">
+                    <div class="admin-empty-icon">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 4h14v16H5z" stroke="currentColor"
+                                  stroke-width="1.5" stroke-linejoin="round"/>
+                            <path d="M8 8h8M8 12h8" stroke="currentColor"
+                                  stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h2>Aucun événement</h2>
+                    <p>Aucun événement ne correspond aux filtres sélectionnés.</p>
+                </div>
+            {% endif %}
+
+        </section>
+
+    </main>
+
+</div>
+
+{% endblock %}

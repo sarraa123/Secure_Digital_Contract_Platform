@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}SOC — Alerte #{{ alert.id }}{% endblock %}
+
+{% block content %}
+
+<div class="admin-layout">
+
+{% include "admin/_sidebar.html" with context %}
+    <main class="admin-main">
+
+        <header class="admin-topbar">
+            <div>
+                <span class="eyebrow">
+                    Alerte #{{ alert.id }} · {{ alert.rule_name }}
+                </span>
+                <h1>{{ alert.title }}</h1>
+                <p class="admin-page-description">
+                    {{ alert.description }}
+                </p>
+            </div>
+
+            <a href="{{ url_for('soc.alerts') }}" class="soc-btn-reset">
+                ← Retour aux alertes
+            </a>
+        </header>
+
+        <!-- Résumé -->
+        <section class="admin-section soc-detail-grid">
+
+            <div class="card soc-panel">
+                <div class="soc-panel-header">
+                    <h2>Contexte</h2>
+                    <span class="soc-severity soc-severity-{{ alert.severity|lower }}">
+                        {{ alert.severity }}
+                    </span>
+                </div>
+
+                <div class="soc-detail-rows">
+                    <div class="soc-detail-row">
+                        <span class="k">Règle</span>
+                        <span class="v soc-cell-mono">{{ alert.rule_name }}</span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Statut</span>
+                        <span class="v">
+                            <span class="soc-status soc-status-{{ alert.status|lower }}">
+                                {{ alert.status }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Événements liés</span>
+                        <span class="v">{{ alert.event_count }}</span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Première observation</span>
+                        <span class="v soc-cell-mono">
+                            {{ alert.first_seen.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                        </span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Dernière observation</span>
+                        <span class="v soc-cell-mono">
+                            {{ alert.last_seen.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                        </span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Adresse IP</span>
+                        <span class="v soc-cell-mono">{{ alert.ip_address or '—' }}</span>
+                    </div>
+                    <div class="soc-detail-row">
+                        <span class="k">Utilisateur</span>
+                        <span class="v">
+                            {% if alert.user_id %}
+                                <a href="{{ url_for('soc.user_timeline', user_id=alert.user_id) }}"
+                                   class="soc-user-link">
+                                    {{ alert.user.username if alert.user else '#' ~ alert.user_id }} →
+                                </a>
+                            {% else %}—{% endif %}
+                        </span>
+                    </div>
+                    {% if alert.resolved_at %}
+                        <div class="soc-detail-row">
+                            <span class="k">Résolu le</span>
+                            <span class="v soc-cell-mono">
+                                {{ alert.resolved_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                                {% if alert.resolver %}
+                                    par {{ alert.resolver.username }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card soc-panel">
+                <div class="soc-panel-header">
+                    <h2>Actions</h2>
+                </div>
+
+                <form method="POST"
+                      action="{{ url_for('soc.alert_update_status', alert_id=alert.id) }}"
+                      class="soc-action-form">
+
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <label class="form-label">Changer le statut :</label>
+
+                    <div class="soc-action-buttons">
+                        <button type="submit" name="status" value="TRIAGED"
+                                class="soc-action-btn soc-action-triage"
+                                {% if alert.status == 'TRIAGED' %}disabled{% endif %}>
+                            Traiter
+                        </button>
+                        <button type="submit" name="status" value="INVESTIGATING"
+                                class="soc-action-btn soc-action-investigate"
+                                {% if alert.status == 'INVESTIGATING' %}disabled{% endif %}>
+                            En investigation
+                        </button>
+                        <button type="submit" name="status" value="RESOLVED"
+                                class="soc-action-btn soc-action-resolve"
+                                {% if alert.status == 'RESOLVED' %}disabled{% endif %}>
+                            Résoudre
+                        </button>
+                        <button type="submit" name="status" value="FALSE_POSITIVE"
+                                class="soc-action-btn soc-action-fp"
+                                {% if alert.status == 'FALSE_POSITIVE' %}disabled{% endif %}>
+                            Faux positif
+                        </button>
+                    </div>
+                </form>
+
+                {% if alert.details %}
+                    <div class="soc-panel-header" style="margin-top:24px;">
+                        <h2>Détails</h2>
+                    </div>
+                    <pre class="soc-json-block">{{ alert.details }}</pre>
+                {% endif %}
+            </div>
+
+        </section>
+
+        <!-- Événements liés -->
+        <section class="admin-section">
+            <div class="admin-section-header">
+                <div>
+                    <span class="eyebrow">Corrélation</span>
+                    <h2>Événements liés</h2>
+                </div>
+            </div>
+
+            {% if related_events %}
+                <div class="soc-table-wrap">
+                    <table class="soc-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Statut</th>
+                                <th>Endpoint</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for e in related_events %}
+                                <tr>
+                                    <td class="soc-cell-mono">
+                                        {{ e.timestamp.strftime('%d/%m %H:%M:%S') }}
+                                    </td>
+                                    <td><span class="soc-event-code">{{ e.event_type }}</span></td>
+                                    <td>
+                                        <span class="soc-status soc-status-{{ e.status|lower }}">
+                                            {{ e.status }}
+                                        </span>
+                                    </td>
+                                    <td class="soc-cell-mono soc-cell-trunc">
+                                        {{ e.endpoint or '—' }}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('soc.event_detail', event_id=e.id) }}"
+                                           class="soc-detail-link">→</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="soc-empty">Aucun événement lié dans la fenêtre temporelle.</p>
+            {% endif %}
+        </section>
+
+    </main>
+
+</div>
+
+{% endblock %}
